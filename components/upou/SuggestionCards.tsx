@@ -1,0 +1,53 @@
+import { ClipboardList, BookOpen, Wrench, Wallet } from "lucide-react";
+import { Card } from "@/components/ui/card";
+
+const SUGGESTIONS = [
+  {
+    icon: ClipboardList,
+    title: "Enrollment Process",
+    description: "How do I apply for admission to UPOU?",
+    prompt: "How do I apply for admission to UPOU?",
+  },
+  {
+    icon: BookOpen,
+    title: "Available Programs",
+    description: "What degree programs does UPOU offer?",
+    prompt: "What degree programs does UPOU offer?",
+  },
+  {
+    icon: Wrench,
+    title: "Technical Support",
+    description: "I can't log in to MyPortal",
+    prompt: "I can't log in to MyPortal — how do I reset my password?",
+  },
+  {
+    icon: Wallet,
+    title: "Tuition & Fees",
+    description: "How much does a UPOU degree cost?",
+    prompt: "How much does a UPOU degree cost and what scholarships are available?",
+  },
+];
+
+export function SuggestionCards({ onSelect }: { onSelect: (prompt: string) => void }) {
+  return (
+    <div className="grid w-full max-w-3xl grid-cols-1 gap-3 sm:grid-cols-2">
+      {SUGGESTIONS.map(({ icon: Icon, title, description, prompt }) => (
+        <Card
+          key={title}
+          onClick={() => onSelect(prompt)}
+          className="group cursor-pointer border-border/70 p-4 transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[var(--shadow-elegant)]"
+        >
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+              <Icon className="h-4 w-4" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-sm font-semibold text-foreground">{title}</h3>
+              <p className="mt-0.5 text-xs text-muted-foreground">{description}</p>
+            </div>
+          </div>
+        </Card>
+      ))}
+    </div>
+  );
+}
