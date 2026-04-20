@@ -26,10 +26,15 @@ export function extractKeywords(searchTarget) {
     const cleanText = lowerText.replace(/[^a-z0-9\s]/g, "");
     console.log("Cleaned Text:", cleanText);
 
-     // 3. Split into individual words
-      const words = cleanText.split(/\s+/).filter(word => word.length > 0);
-      console.log("Words:", words);
+    // 3. Split into individual words
+    const words = cleanText.split(/\s+/).filter(word => word.length > 0);
+    console.log("Words:", words);
 
+    // 4. Filter out stop words and short words (less than 3 characters)
+    const keywords = words.filter(word =>
+        !STOP_WORDS.has(word) && word.length >= 3
+    );
+    console.log("Keywords after stop word removal:", keywords);
 
   } catch (error) {
     console.error("Extract Keywords Error:", error);
