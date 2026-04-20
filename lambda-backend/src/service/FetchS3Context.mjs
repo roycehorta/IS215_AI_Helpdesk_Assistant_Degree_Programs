@@ -180,3 +180,32 @@ function scoreContent(content, classified) {
 
   return score;
 }
+// ── S3 helpers ────────────────────────────────────────────────────────────────
+
+async function listKeys(prefix) {
+  const keys = [];
+  let token;
+  do {
+    const res = await s3.send(new ListObjectsV2Command({
+      Bucket: BUCKET,
+      Prefix: prefix,
+      ...(token && { ContinuationToken: token }),
+    }));
+    for (const obj of res.Contents || []) {
+      if (obj.Key.endsWith(".md")) keys.push(obj.Key);
+    }
+    token = res.IsTruncated ? res.NextContinuationToken : null;
+  } while (token);
+  return keys;
+}
+
+async function fetchFile(key) {
+  try {
+    const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
+    const chunks = [];
+    for await (const chunk of res.Body) chunks.push(chunk);
+    return Buffer.concat(chunks).toString("utf-8");
+  } catch {
+    return null;
+  }
+}
