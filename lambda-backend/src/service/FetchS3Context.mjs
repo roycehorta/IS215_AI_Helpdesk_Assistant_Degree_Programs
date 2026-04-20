@@ -137,3 +137,46 @@ function parseS3Key(s3Key) {
   return { faculty, acronym, nameWords, level, isFacultyOverview };
 }
 
+// ── Scoring ───────────────────────────────────────────────────────────────────
+
+function scoreFilename(parsed, classified) {
+  let score = 0;
+
+  if (classified.acronym && parsed.acronym === classified.acronym) score += 5;
+
+  for (const term of classified.programTerms) {
+    if (parsed.nameWords.includes(term) || parsed.acronym === term) score += 2;
+  }
+
+  const isFacultyTopicQuery = classified.topicTerms.some(
+    t => ["faculties", "faculty", "schools", "departments", "programs", "offerings"].includes(t),
+  );
+  const isGeneralQuery =
+    !classified.level &&
+    !classified.acronym &&
+    classified.programTerms.length === 0;
+
+  if (parsed.isFacultyOverview && (isGeneralQuery || isFacultyTopicQuery)) score += 5;
+
+  return score;
+}
+
+function scoreContent(content, classified) {
+  if (!content) return 0;
+  const text = content.toLowerCase();
+  let score = 0;
+
+  const terms = [
+    classified.acronym,
+    ...classified.programTerms,
+    ...classified.topicTerms,
+  ].filter(Boolean);
+
+  for (const term of terms) {
+    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const hits    = (text.match(new RegExp(`\\b${escaped}\\b`, "g")) || []).length;
+    score += Math.min(hits, 5);
+  }
+
+  return score;
+}
