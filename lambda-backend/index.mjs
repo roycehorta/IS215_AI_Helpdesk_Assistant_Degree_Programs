@@ -9,9 +9,7 @@ import { fetchS3Context }       from './src/service/FetchS3Context.mjs';
 export const handler = async (event) => {
     // 1. Get User Question
         const {userQuestion, chatHistory} = await getUserQuestion(event);
-        console.log("User Question:", userQuestion);
-    
-
+        console.log("User Question: ", userQuestion);
     
     // 3.Extract Keywords
     const keywords = await extractKeywords(searchTarget);
