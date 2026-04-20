@@ -209,3 +209,72 @@ async function fetchFile(key) {
     return null;
   }
 }
+
+// ── Main export ───────────────────────────────────────────────────────────────
+
+/**
+ * fetchS3Context
+ *
+ * Searches S3 for UPOU degree program documents relevant to the given keywords.
+ *
+ * Three-tier search strategy:
+ *   Tier 1 — S3 prefix filter  (zero reads  — faculty + level path narrowing)
+ *   Tier 2 — Filename scoring  (zero reads  — acronym + name word matching)
+ *   Tier 3 — Content scoring   (file reads  — topic/acronym hits in body text)
+ *
+ * Result cap:
+ *   • Full-listing queries (faculty scoped, no specific program signal)
+ *     → returns ALL files in the pool (no cap) so every program is included.
+ *   • Specific-program queries (acronym or program name present)
+ *     → capped at TOP_K = 5, ranked by relevance score.
+ *
+ * @param   {string[]} keywords
+ * @returns {Promise<object>}
+ */
+export async function fetchS3Context(keywords) {
+
+  if (!BUCKET) {
+    return { success: false, error: "S3_BUCKET_NAME environment variable is not set." };
+  }
+  if (!Array.isArray(keywords) || keywords.length === 0) {
+    return { success: false, error: "keywords must be a non-empty array." };
+  }
+
+  // ── Step 1: Classify ───────────────────────────────────────────────────────
+  const classified = classifyKeywords(keywords);
+
+  const isFacultyListQuery = classified.topicTerms.some(
+    t => ["faculties", "faculty", "schools", "departments", "programs", "offerings"].includes(t),
+  );
+
+  const hasNavigationSignal =
+    classified.faculty              ||
+    classified.level                ||
+    classified.acronym              ||
+    classified.programTerms.length > 0 ||
+    isFacultyListQuery;
+
+  if (!hasNavigationSignal) {
+    return {
+      success: true,
+      found: false,
+      message:
+        "Keywords are too general to locate a specific program. " +
+        "Please include a faculty name, program level, or program acronym.",
+      offerTicket: true,
+      ticketPrompt:
+        "Would you like to submit a support ticket so a UPOU staff member can answer your inquiry directly?",
+      classifiedKeywords: classified,
+    };
+  }
+
+  // ── Step 2 (Tier 1): S3 prefix filter ─────────────────────────────────────
+  let prefix = BASE_PREFIX;
+  if (classified.faculty)                     prefix += `${classified.faculty}/`;
+  if (classified.faculty && classified.level) prefix += `${classified.level}/`;
+
+  let allKeys = await listKeys(prefix);
+
+  if (!classified.faculty && classified.level) {
+    allKeys = allKeys.filter(k => k.includes(`/${classified.level}/`));
+  }
