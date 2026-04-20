@@ -278,3 +278,15 @@ export async function fetchS3Context(keywords) {
   if (!classified.faculty && classified.level) {
     allKeys = allKeys.filter(k => k.includes(`/${classified.level}/`));
   }
+
+    if (allKeys.length === 0) {
+    return {
+      success: true,
+      found: false,
+      message: "No documents found for the specified faculty or level.",
+      offerTicket: true,
+      ticketPrompt:
+        "Would you like to submit a support ticket so a UPOU staff member can answer your inquiry directly?",
+      classifiedKeywords: classified,
+    };
+  }
