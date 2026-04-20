@@ -18,7 +18,12 @@ export function extractKeywords(searchTarget) {
   console.log("Search Target :", searchTarget);
 
   try {
-    return [];
+    const lowerText = searchTarget.toLowerCase();
+    console.log("Lowercased Text:", lowerText);
+
+    const cleanText = lowerText.replace(/[^a-z0-9\s]/g, "");
+    console.log("Cleaned Text:", cleanText);
+    
   } catch (error) {
     console.error("Extract Keywords Error:", error);
     throw new Error("Failed to extract keywords.");
