@@ -36,6 +36,13 @@ export function extractKeywords(searchTarget) {
     );
     console.log("Keywords after stop word removal:", keywords);
 
+    // 5. Remove duplicate keywords
+    const uniqueKeywords = [...new Set(keywords)];
+    console.log("Unique Keywords:", uniqueKeywords);
+    
+    return uniqueKeywords;
+
+
   } catch (error) {
     console.error("Extract Keywords Error:", error);
     throw new Error("Failed to extract keywords.");
