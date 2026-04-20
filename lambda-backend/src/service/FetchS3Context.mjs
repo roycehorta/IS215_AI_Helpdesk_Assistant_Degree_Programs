@@ -363,3 +363,55 @@ export async function fetchS3Context(keywords) {
       }),
     );
   }
+
+    // ── Step 5: Filter, sort, cap ──────────────────────────────────────────────
+  const MIN_SCORE = 1;
+
+  const ranked = finalScored
+    .filter(d => d.totalScore >= MIN_SCORE)
+    .sort((a, b) => b.totalScore - a.totalScore)
+    .slice(0, effectiveTopK);
+
+  if (ranked.length === 0) {
+    return {
+      success: true,
+      found: false,
+      message: "No relevant degree program documents were found for the provided keywords.",
+      offerTicket: true,
+      ticketPrompt:
+        "Would you like to submit a support ticket so a UPOU staff member can answer your inquiry directly?",
+      classifiedKeywords: classified,
+    };
+  }
+
+  // ── Step 6: Ensure content is loaded for all top results ──────────────────
+  const documents = await Promise.all(
+    ranked.map(async ({ key, parsed, filenameScore, contentScore, totalScore, content }) => {
+      const finalContent = content ?? await fetchFile(key);
+      return {
+        key,
+        metadata: {
+          faculty:           parsed.faculty?.toUpperCase() ?? null,
+          level:             parsed.level ?? null,
+          acronym:           parsed.isFacultyOverview ? null : parsed.acronym?.toUpperCase() ?? null,
+          isFacultyOverview: parsed.isFacultyOverview,
+        },
+        scores: {
+          filename: filenameScore,
+          content:  contentScore ?? 0,
+          total:    totalScore,
+        },
+        content: finalContent,
+      };
+    }),
+  );
+
+  return {
+    success: true,
+    found: true,
+    totalScanned: allKeys.length,
+    totalMatched: ranked.length,
+    classifiedKeywords: classified,
+    documents,
+  };
+}
