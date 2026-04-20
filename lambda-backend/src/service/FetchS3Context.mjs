@@ -290,3 +290,76 @@ export async function fetchS3Context(keywords) {
       classifiedKeywords: classified,
     };
   }
+
+  // ── Step 3 (Tier 2): Filename scoring ──────────────────────────────────────
+  const filenameScored = allKeys.map(key => {
+    const parsed = parseS3Key(key);
+    return { key, parsed, filenameScore: scoreFilename(parsed, classified) };
+  });
+
+  // ── Determine query mode ───────────────────────────────────────────────────
+  //
+  // A "full listing" query is one where the user has scoped to a specific
+  // faculty (prefix already narrows the pool) but has not named a particular
+  // program via acronym or name words.
+  //
+  // Examples → full listing:
+  //   ["FICS"]                → faculty=fics, no acronym/programTerms
+  //   ["FICS","programs"]     → faculty=fics, topicTerms=[programs]
+  //   ["FICS","degree","programs"] → "degree" in NOISE_TOKENS, no acronym
+  //   ["FMDS","masters"]      → faculty=fmds, level=masters, no acronym
+  //
+  // Examples → specific search (TOP_K=5, content-scored):
+  //   ["MIS","curriculum"]    → acronym=mis
+  //   ["FICS","social work"]  → programTerms=[social,work]
+  const isFullListingQuery =
+    !!classified.faculty &&
+    !classified.acronym &&
+    classified.programTerms.length === 0;
+
+  // FIX — Full listing queries bypass content scoring entirely.
+  // When the pool is already narrowed to a specific faculty (and optionally
+  // level), every file in it is relevant by definition. Running content
+  // scoring on topic terms like "programs" would arbitrarily exclude files
+  // that never use that word — individual program files are highly specific
+  // and often describe a single program without saying "programs" at all.
+  const needsContentScore =
+    !isFullListingQuery && (
+      classified.acronym !== null        ||
+      classified.programTerms.length > 0 ||
+      classified.topicTerms.length > 0
+    );
+
+  // Full listing → no cap; specific search → TOP_K = 5.
+  const effectiveTopK = isFullListingQuery ? allKeys.length : TOP_K;
+
+  let finalScored;
+
+  if (!needsContentScore) {
+    finalScored = filenameScored.map(d => ({
+      ...d,
+      contentScore: 0,
+      totalScore: d.filenameScore > 0 ? d.filenameScore : 1,
+      content: null,
+    }));
+  } else {
+    const hasAnyFilenameHit = filenameScored.some(d => d.filenameScore > 0);
+
+    const candidates = filenameScored.filter(d =>
+      d.filenameScore > 0 ||
+      allKeys.length <= 15 ||
+      (!hasAnyFilenameHit && classified.acronym !== null),
+    );
+
+    finalScored = await Promise.all(
+      candidates.map(async ({ key, parsed, filenameScore }) => {
+        const content      = await fetchFile(key);
+        const contentScore = scoreContent(content, classified);
+        return {
+          key, parsed, filenameScore, contentScore,
+          totalScore: filenameScore + contentScore,
+          content,
+        };
+      }),
+    );
+  }
