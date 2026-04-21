@@ -1,4 +1,4 @@
-// frontend\src\types\chat.ts
+// frontend/src/types/chat.ts
 export type Sender = 'user' | 'bot';
 
 export interface Message {

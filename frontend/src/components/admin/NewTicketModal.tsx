@@ -1,4 +1,3 @@
-// frontend\src\components\admin\NewTicketModal.tsx
 // frontend/src/components/admin/NewTicketModal.tsx
 import { FC, useState } from 'react';
 import { Ticket } from '../../types/ticket';
