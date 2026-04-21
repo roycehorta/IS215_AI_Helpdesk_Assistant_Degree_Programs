@@ -33,7 +33,10 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
   const lastBotMessage = [...messages]
     .reverse()
     .find((m) => m.sender === "bot");
-  const hasActionLinks = lastBotMessage?.text.includes("#action") ?? false;
+
+    const hasActionLinks = typeof lastBotMessage?.text === "string" 
+  ? lastBotMessage.text.includes("#action") 
+  : false;
 
   useEffect(() => {
     if (scrollRef.current) {

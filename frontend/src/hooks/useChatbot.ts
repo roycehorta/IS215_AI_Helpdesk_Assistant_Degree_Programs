@@ -371,46 +371,47 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
     console.log("Sending to API:", { question: text, history: historyPayload });
     console.log("API URL:", import.meta.env.VITE_API_URL);
 
-    try {
-      const response = await fetch(import.meta.env.VITE_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: text, history: historyPayload }),
-      });
-      const data: ChatResponse = await response.json();
-      setMessages((prev) => [...prev, { text: data.answer, sender: "bot" }]);
+// ✅ Fix — remove the last setCurrentMenu line
+try {
+  const response = await fetch(import.meta.env.VITE_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ question: text, history: historyPayload }),
+  });
+  const data: ChatResponse = await response.json();
+  setMessages((prev) => [...prev, { text: data.answer, sender: "bot" }]);
 
-      // Increment counter and show follow-up every 3rd API call
-      const newCount = apiCallCount + 1;
-      setApiCallCount(newCount);
-      console.log('API call count:', newCount, '— show trapper:', newCount % 3 === 0);
+  const newCount = apiCallCount + 1;
+  setApiCallCount(newCount);
 
-      if (newCount % 3 === 0) {
-        setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            {
-              text: "Did you get what you're looking for?",
-              sender: "bot",
-            },
-          ]);
-          setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
-        }, 600);
-      } else {
-        setCurrentMenu([]); // ← this clears menu for non-3rd questions
-      }
-
-      setCurrentMenu(MENUS.LEVEL_3_TRAPPER); // ← shows back to menu + ticket options
-    } catch {
+  if (newCount % 3 === 0) {
+    setTimeout(() => {
       setMessages((prev) => [
         ...prev,
-        { text: "Connection error. Please try again.", sender: "bot" },
+        {
+          text: "Did you get what you're looking for?",
+          sender: "bot",
+        },
       ]);
-    } finally {
-      setIsTyping(false);
-      typingSound.pause();
-      typingSound.currentTime = 0;
-    }
+      setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
+    }, 600);
+  } else {
+    setCurrentMenu([]); // ← clears menu for non-3rd questions
+  }
+
+  // ❌ DELETE THIS LINE — was overriding everything above
+  // setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
+
+} catch {
+  setMessages((prev) => [
+    ...prev,
+    { text: "Connection error. Please try again.", sender: "bot" },
+  ]);
+} finally {
+  setIsTyping(false);
+  typingSound.pause();
+  typingSound.currentTime = 0;
+}
   };
 
   return {

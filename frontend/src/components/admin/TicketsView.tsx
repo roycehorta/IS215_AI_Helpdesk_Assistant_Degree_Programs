@@ -1,7 +1,6 @@
 // frontend/src/components/admin/TicketsView.tsx
-// frontend/src/components/admin/TicketsView.tsx
-import { Search } from 'lucide-react';
-import { FC, useState } from 'react';
+import { RefreshCw, Search } from 'lucide-react';
+import { FC, useEffect, useState } from 'react';
 import { Ticket } from '../../types/ticket';
 import NewTicketModal from './NewTicketModal';
 import TicketModal from './TicketModal';
@@ -17,18 +16,68 @@ const TicketsView: FC<Props> = ({ tickets, setTickets }) => {
   const [sort, setSort] = useState('Newest first');
   const [selectedTicket, setSelectedTicket] = useState<Ticket | null>(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+  // ── Fetch tickets from DynamoDB via Lambda ──────────────────────────
+  const fetchTickets = async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await fetch(import.meta.env.VITE_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ _route: 'get-tickets' })
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error ?? 'Failed to fetch tickets');
+
+      // ── Map DynamoDB fields → Ticket type ──
+      const mapped: Ticket[] = data.tickets.map((t: {
+        ticketId: string;
+        name: string;
+        email: string;
+        category: string;
+        description: string;
+        status: string;
+        createdAt: string;
+        question: string;
+      }) => ({
+        id:      t.ticketId,
+        user:    t.email || t.name,
+        subject: t.category || 'General',
+        status:  (t.status === 'OPEN' ? 'New' : t.status) as Ticket['status'],
+        date:    t.createdAt ? t.createdAt.split('T')[0] : '',
+        details: t.description || t.question || '',
+      }));
+
+      setTickets(mapped);
+    } catch (err) {
+      console.error('Fetch tickets error:', err);
+      setError('Failed to load tickets. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch on mount
+  useEffect(() => { fetchTickets(); }, []);
+
   const filtered = tickets
     .filter(t => {
-      const matchSearch = t.id.toLowerCase().includes(search.toLowerCase()) ||
+      const matchSearch =
+        t.id.toLowerCase().includes(search.toLowerCase()) ||
         t.user.toLowerCase().includes(search.toLowerCase()) ||
         t.subject.toLowerCase().includes(search.toLowerCase());
       const matchStatus = statusFilter === 'All statuses' || t.status === statusFilter;
       return matchSearch && matchStatus;
     })
-    .sort((a, b) => sort === 'Newest first' ? b.date.localeCompare(a.date) : a.date.localeCompare(b.date));
+    .sort((a, b) => sort === 'Newest first'
+      ? b.date.localeCompare(a.date)
+      : a.date.localeCompare(b.date));
 
   const handleStatusChange = (newStatus: Ticket['status']) => {
     if (!selectedTicket) return;
@@ -92,6 +141,14 @@ const TicketsView: FC<Props> = ({ tickets, setTickets }) => {
           <option>Oldest first</option>
         </select>
         <button
+          onClick={fetchTickets}
+          disabled={loading}
+          className="flex items-center gap-2 px-3 py-2 text-sm border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50"
+        >
+          <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
+        <button
           onClick={() => setIsAdding(true)}
           className="ml-auto px-4 py-2 bg-primary text-white text-sm font-medium rounded-lg hover:bg-primary/90 transition-colors"
         >
@@ -99,51 +156,67 @@ const TicketsView: FC<Props> = ({ tickets, setTickets }) => {
         </button>
       </div>
 
+      {/* Error */}
+      {error && (
+        <div className="mx-8 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-600">
+          {error}
+        </div>
+      )}
+
       {/* Table */}
       <div className="flex-1 overflow-y-auto px-8 py-4">
-        <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-          <table className="w-full text-left">
-            <thead>
-              <tr className="border-b border-gray-100 bg-gray-50">
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ticket ID</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Student Name</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Concern</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date Submitted</th>
-                <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {filtered.map(t => (
-                <tr
-                  key={t.id}
-                  onClick={() => setSelectedTicket(t)}
-                  className="hover:bg-gray-50 cursor-pointer transition-colors"
-                >
-                  <td className="px-5 py-4 text-xs font-bold text-primary">{t.id}</td>
-                  <td className="px-5 py-4">
-                    <p className="text-sm font-medium text-gray-900">{t.user.split('@')[0].replace('.', ' ').replace(/\b\w/g, c => c.toUpperCase())}</p>
-                    <p className="text-xs text-gray-400">{t.user}</p>
-                  </td>
-                  <td className="px-5 py-4 max-w-xs">
-                    <p className="text-sm font-medium text-gray-800">{t.subject}</p>
-                    <p className="text-xs text-gray-400 truncate">{t.details}</p>
-                  </td>
-                  <td className="px-5 py-4 text-sm text-gray-500">{t.date}</td>
-                  <td className="px-5 py-4">
-                    <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
-                      t.status === 'Resolved' || t.status === 'Answered' ? 'bg-green-50 text-green-700 border-green-200' :
-                      t.status === 'Replied' ? 'bg-amber-50 text-amber-700 border-amber-200' :
-                      'bg-blue-50 text-blue-700 border-blue-200'
-                    }`}>{t.status}</span>
-                  </td>
+        {loading ? (
+          <div className="flex items-center justify-center h-40 text-sm text-gray-400">
+            Loading tickets...
+          </div>
+        ) : (
+          <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="border-b border-gray-100 bg-gray-50">
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Ticket ID</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Student Name</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Concern</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Date Submitted</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
                 </tr>
-              ))}
-              {filtered.length === 0 && (
-                <tr><td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">No tickets found.</td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {filtered.map(t => (
+                  <tr
+                    key={t.id}
+                    onClick={() => setSelectedTicket(t)}
+                    className="hover:bg-gray-50 cursor-pointer transition-colors"
+                  >
+                    <td className="px-5 py-4 text-xs font-bold text-primary truncate max-w-[120px]">{t.id}</td>
+                    <td className="px-5 py-4">
+                      <p className="text-sm font-medium text-gray-900">{t.user}</p>
+                    </td>
+                    <td className="px-5 py-4 max-w-xs">
+                      <p className="text-sm font-medium text-gray-800">{t.subject}</p>
+                      <p className="text-xs text-gray-400 truncate">{t.details}</p>
+                    </td>
+                    <td className="px-5 py-4 text-sm text-gray-500">{t.date}</td>
+                    <td className="px-5 py-4">
+                      <span className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                        t.status === 'Resolved' || t.status === 'Answered' ? 'bg-green-50 text-green-700 border-green-200' :
+                        t.status === 'Replied' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        'bg-blue-50 text-blue-700 border-blue-200'
+                      }`}>{t.status}</span>
+                    </td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">
+                      No tickets found.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
 
       {selectedTicket && (

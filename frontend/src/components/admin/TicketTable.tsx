@@ -1,4 +1,3 @@
-// frontend\src\components\admin\TicketTable.tsx
 // frontend/src/components/admin/TicketTable.tsx
 import { FC, useState } from 'react';
 import { Ticket, getStatusBadge } from '../../types/ticket';

@@ -18,11 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  generateTicketReference,
-  saveTicket,
-  type ChatMessage,
-} from "@/lib/chat-storage";
+import { type ChatMessage } from "@/lib/chat-storage";
 import { CheckCircle2 } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -68,10 +64,8 @@ export function TicketDialog({ open, onOpenChange, transcript }: Props) {
       description: "",
     });
 
-  const handleSubmit = () => {
-    console.log("Submit clicked, form:", form);
+  const handleSubmit = async () => {
     const parsed = ticketSchema.safeParse(form);
-    console.log("Parsed result:", parsed);
     if (!parsed.success) {
       const first = parsed.error.issues[0];
       toast.error(first?.message ?? "Please check the form");
@@ -80,26 +74,34 @@ export function TicketDialog({ open, onOpenChange, transcript }: Props) {
 
     try {
       setSubmitting(true);
-      const ref = generateTicketReference();
-      saveTicket({
-        id: crypto.randomUUID(),
-        reference: ref,
-        name: parsed.data.name,
-        email: parsed.data.email,
-        studentId: parsed.data.studentId || undefined,
-        category: parsed.data.category,
-        description: parsed.data.description,
-        transcript,
-        createdAt: Date.now(),
+
+      // ── Call Lambda via Vite proxy ──
+      const response = await fetch(import.meta.env.VITE_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          _route: "ticket", // ← tell Lambda this is a ticket request
+          name: parsed.data.name,
+          email: parsed.data.email,
+          studentId: parsed.data.studentId || "",
+          category: parsed.data.category,
+          description: parsed.data.description,
+          transcript,
+        }),
       });
-      setReference(ref);
+
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error ?? "Failed to submit ticket");
+
+      setReference(data.ticketId);
       reset();
-      setSubmitting(false);
-      setSubmitted(true); // ← move to very last, after everything else
+      setSubmitted(true);
     } catch (err) {
       console.error("Ticket error:", err);
+      toast.error("Could not submit ticket. Please try again.");
+    } finally {
       setSubmitting(false);
-      toast.error("Could not save ticket. Please try again.");
     }
   };
 

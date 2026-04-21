@@ -31,8 +31,8 @@ export function UpouSidebar({ conversations, activeId, onNewChat, onSelect, onDe
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border/60">
         <div className="flex items-center gap-2 px-1 py-2">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground">
-          <img src="/src/img/up.png" alt="UP Logo" className="h-5 w-5 object-contain" />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg  text-sidebar-primary-foreground">
+          <img src="/src/img/up.png" alt="UP Logo" className="h-12 w-12 object-contain" />
         </div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
             <span className="text-sm font-bold text-sidebar-foreground">UPOU Helpdesk</span>
