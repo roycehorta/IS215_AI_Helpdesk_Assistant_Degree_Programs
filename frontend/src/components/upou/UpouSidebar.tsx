@@ -47,7 +47,7 @@ export function UpouSidebar({
         <div className="flex items-center gap-2 px-1 py-2">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg  text-sidebar-primary-foreground">
             <img
-              src="/src/img/up.png"
+              src="/up.png"
               alt="UP Logo"
               className="h-12 w-12 object-contain"
             />
@@ -63,8 +63,8 @@ export function UpouSidebar({
         </div>
         <div className="px-1 pb-2 group-data-[collapsible=icon]:hidden">
           <Button
-            onClick={onNewChat}
-            className="w-full justify-start gap-2 bg-sidebar-primary text-sidebar-primary-foreground hover:bg-sidebar-primary/90"
+            onClick={() => { onNewChat(); navigate("/"); }}
+            className="w-full justify-start gap-2  text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:cursor-pointer"
             size="sm"
           >
             <MessageSquarePlus className="h-4 w-4" />

@@ -1,10 +1,12 @@
+// frontend/src/types/ticket.ts
 export interface Ticket {
   id: string;
   user: string;
+  name: string;   // add if missing
   subject: string;
-  status: 'New' | 'Answered';  // ← only 2
+  status: "New" | "Answered";
   date: string;
-  details?: string;
+  details: string;
 }
 
 export const getStatusBadge = (status: string) => {

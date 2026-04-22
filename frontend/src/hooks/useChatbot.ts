@@ -42,6 +42,7 @@ export const MENUS = {
 const WELCOME: Message = {
   text: "Welcome to UPOU! 🎓 I am your Degree Programs Advisor. I can help you navigate our offerings. How can I help you today?",
   sender: "bot",
+  timestamp: Date.now(),
 };
 
 function uid() {
@@ -55,9 +56,11 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentMenu, setCurrentMenu] = useState<string[]>(MENUS.LEVEL_0);
+  // to:
   const [ticketStep, setTicketStep] = useState<
     "idle" | "subject" | "description" | "email"
   >("idle");
+
   const [draftTicket, setDraftTicket] = useState<{
     subject?: string;
     details?: string;
@@ -65,19 +68,16 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
 
-  // Load from localStorage on mount
   useEffect(() => {
     const stored = loadConversations();
     setConversations(stored);
     setHydrated(true);
   }, []);
 
-  // Save to localStorage whenever conversations change
   useEffect(() => {
     if (hydrated) saveConversations(conversations);
   }, [conversations, hydrated]);
 
-  // Save messages to active conversation whenever messages change
   useEffect(() => {
     if (!activeId || messages.length <= 1) return;
     setConversations((prev) =>
@@ -100,36 +100,34 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
 
   const handleNewChat = () => {
     setActiveId(null);
-    setMessages([WELCOME]);
+    setMessages([{ ...WELCOME, timestamp: Date.now() }]);
     setCurrentMenu(MENUS.LEVEL_0);
     setTicketStep("idle");
     setDraftTicket({});
     setApiCallCount(0);
   };
 
-  // Select a past conversation
   const handleSelectConversation = (id: string) => {
     const convo = conversations.find((c) => c.id === id);
     if (!convo) return;
     setActiveId(id);
     setMessages(
       convo.messages
-        .filter((m) => typeof m.content === "string") // ← add this filter
+        .filter((m) => typeof m.content === "string")
         .map((m) => ({
-          text: m.content ?? "", // ← add fallback
-          sender: m.role === "bot" ? "bot" : "user",
+          text: m.content ?? "",
+          sender: m.role === "bot" ? "bot" : ("user" as const),
+          timestamp: m.createdAt,
         })),
     );
     setCurrentMenu(MENUS.LEVEL_0);
   };
 
-  // Delete a conversation
   const handleDeleteConversation = (id: string) => {
     setConversations((prev) => prev.filter((c) => c.id !== id));
     if (activeId === id) handleNewChat();
   };
 
-  // Create new conversation entry when first real message is sent
   const ensureConversation = (firstUserMessage: string): string => {
     if (activeId) return activeId;
     const newId = uid();
@@ -159,12 +157,15 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
         {
           text: "Ticket creation cancelled. What would you like to explore?",
           sender: "bot",
+          timestamp: Date.now(),
         },
       ]);
       return true;
     }
+
     if (ticketStep !== "idle") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
+
       if (ticketStep === "subject") {
         setDraftTicket((prev) => ({ ...prev, subject: text }));
         setTicketStep("description");
@@ -175,6 +176,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
               {
                 text: "Please provide a detailed description of your issue:",
                 sender: "bot",
+                timestamp: Date.now(),
               },
             ]),
           400,
@@ -189,6 +191,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
               {
                 text: "Finally, please provide your email address so our IT staff can contact you:",
                 sender: "bot",
+                timestamp: Date.now(),
               },
             ]),
           400,
@@ -197,10 +200,11 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
         const finalTicket: Ticket = {
           id: `TKT-${Math.floor(1000 + Math.random() * 9000)}`,
           user: text,
-          subject: draftTicket.subject || "No Subject",
+          name: text,
+          subject: draftTicket.subject ?? "No Subject",
           status: "New",
           date: new Date().toISOString().split("T")[0],
-          details: draftTicket.details,
+          details: draftTicket.details ?? "",
         };
         onTicketCreate(finalTicket);
         setTicketStep("idle");
@@ -213,6 +217,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
               {
                 text: "Thank you! Your ticket has been submitted successfully.",
                 sender: "bot",
+                timestamp: Date.now(),
               },
             ]),
           400,
@@ -240,20 +245,23 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
             {
               text: "Returning to the main menu. What would you like to explore?",
               sender: "bot",
+              timestamp: Date.now(),
             },
           ]),
         500,
       );
       return true;
     }
+
+    // to:
     if (
       lower.includes("open an it helpdesk ticket") ||
       lower.includes("open an it ticket")
     ) {
-      setMessages((prev) => [...prev, { text, sender: "user" }]);
-      setTicketDialogOpen(true);
+      setTicketDialogOpen(true); // just open dialog, no message added
       return true;
     }
+
     if (lower === "continue chat") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
       setCurrentMenu([]);
@@ -264,12 +272,15 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
             {
               text: "Sure! Feel free to ask me anything about UPOU programs.",
               sender: "bot",
+              timestamp: Date.now(),
             },
           ]),
         400,
       );
       return true;
-    } else if (lower === "browse by academic level") {
+    }
+
+    if (lower === "browse by academic level") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
       setCurrentMenu(MENUS.LEVEL_1_LEVELS);
       setTimeout(
@@ -279,12 +290,15 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
             {
               text: "Please select an academic level:\n* [Undergraduate](#action)\n* [Graduate Certificates](#action)\n* [Diplomas](#action)\n* [Master's Programs](#action)\n* [Doctorate](#action)",
               sender: "bot",
+              timestamp: Date.now(),
             },
           ]),
         400,
       );
       return true;
-    } else if (lower === "browse by faculty division") {
+    }
+
+    if (lower === "browse by faculty division") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
       setCurrentMenu(MENUS.LEVEL_1_FACULTY);
       setTimeout(
@@ -294,12 +308,15 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
             {
               text: "Please select a faculty:\n* [Faculty of Education (FEd)](#action)\n* [Information and Communication Studies (FICS)](#action)\n* [Management and Development Studies (FMDS)](#action)",
               sender: "bot",
+              timestamp: Date.now(),
             },
           ]),
         400,
       );
       return true;
-    } else if (lower === "browse by academic calendar") {
+    }
+
+    if (lower === "browse by academic calendar") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
       setCurrentMenu(MENUS.LEVEL_1_CALENDAR);
       setTimeout(
@@ -309,15 +326,17 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
             {
               text: "Please select a calendar type:\n* [Trimester Programs](#action)\n* [Semester Programs](#action)",
               sender: "bot",
+              timestamp: Date.now(),
             },
           ]),
         400,
       );
       return true;
-    } else if (lower === "trimester programs") {
+    }
+
+    if (lower === "trimester programs") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
       setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
-      // Rephrase to a better API question
       setTimeout(
         () =>
           sendMessage(
@@ -326,10 +345,11 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
         100,
       );
       return true;
-    } else if (lower === "semester programs") {
+    }
+
+    if (lower === "semester programs") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
       setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
-      // Rephrase to a better API question
       setTimeout(
         () =>
           sendMessage(
@@ -339,6 +359,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       );
       return true;
     }
+
     return false;
   };
 
@@ -363,7 +384,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       /* noop */
     }
 
-    const historyPayload = messages.slice(-4).map((msg) => ({
+    const historyPayload = messages.slice(-6).map((msg) => ({
       role: msg.sender === "bot" ? "assistant" : "user",
       content: msg.text,
     }));
@@ -371,47 +392,51 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
     console.log("Sending to API:", { question: text, history: historyPayload });
     console.log("API URL:", import.meta.env.VITE_API_URL);
 
-// ✅ Fix — remove the last setCurrentMenu line
-try {
-  const response = await fetch(import.meta.env.VITE_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question: text, history: historyPayload }),
-  });
-  const data: ChatResponse = await response.json();
-  setMessages((prev) => [...prev, { text: data.answer, sender: "bot" }]);
+    try {
+      const response = await fetch(import.meta.env.VITE_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ question: text, history: historyPayload }),
+      });
+      const data: ChatResponse = await response.json();
 
-  const newCount = apiCallCount + 1;
-  setApiCallCount(newCount);
+      setMessages((prev) => [
+        ...prev,
+        { text: data.answer, sender: "bot", timestamp: Date.now() },
+      ]);
 
-  if (newCount % 3 === 0) {
-    setTimeout(() => {
+      const newCount = apiCallCount + 1;
+      setApiCallCount(newCount);
+
+      if (newCount % 3 === 0) {
+        setTimeout(() => {
+          setMessages((prev) => [
+            ...prev,
+            {
+              text: "Did you get what you're looking for?",
+              sender: "bot",
+              timestamp: Date.now(),
+            },
+          ]);
+          setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
+        }, 600);
+      } else {
+        setCurrentMenu([]);
+      }
+    } catch {
       setMessages((prev) => [
         ...prev,
         {
-          text: "Did you get what you're looking for?",
+          text: "Connection error. Please try again.",
           sender: "bot",
+          timestamp: Date.now(),
         },
       ]);
-      setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
-    }, 600);
-  } else {
-    setCurrentMenu([]); // ← clears menu for non-3rd questions
-  }
-
-  // ❌ DELETE THIS LINE — was overriding everything above
-  // setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
-
-} catch {
-  setMessages((prev) => [
-    ...prev,
-    { text: "Connection error. Please try again.", sender: "bot" },
-  ]);
-} finally {
-  setIsTyping(false);
-  typingSound.pause();
-  typingSound.currentTime = 0;
-}
+    } finally {
+      setIsTyping(false);
+      typingSound.pause();
+      typingSound.currentTime = 0;
+    }
   };
 
   return {

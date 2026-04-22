@@ -1,6 +1,6 @@
 // frontend/src/components/upou/SuggestionCards.tsx
 import { Card } from "@/components/ui/card";
-import { Building2, Calendar, GraduationCap, Ticket } from "lucide-react";
+import { Building2, GraduationCap, Ticket } from "lucide-react";
 
 const SUGGESTIONS = [
   {
@@ -15,12 +15,7 @@ const SUGGESTIONS = [
     description: "FED, FICS, or FMDS programs",
     prompt: "Browse by Faculty Division",
   },
-  {
-    icon: Calendar,
-    title: "Browse by Academic Calendar",
-    description: "Trimester or Semester programs",
-    prompt: "Browse by Academic Calendar",
-  },
+ 
   {
     icon: Ticket,
     title: "Open a Support Ticket",

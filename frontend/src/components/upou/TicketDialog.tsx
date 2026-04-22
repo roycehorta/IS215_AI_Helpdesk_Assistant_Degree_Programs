@@ -20,7 +20,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { type ChatMessage } from "@/lib/chat-storage";
 import { CheckCircle2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
 
@@ -40,20 +40,37 @@ type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   transcript: ChatMessage[];
+  initialConcern?: string;
 };
 
-export function TicketDialog({ open, onOpenChange, transcript }: Props) {
+export function TicketDialog({
+  open,
+  onOpenChange,
+  transcript,
+  initialConcern,
+}: Props) {
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [reference, setReference] = useState("");
 
+  // change form initial state to:
   const [form, setForm] = useState({
     name: "",
     email: "",
     studentId: "",
     category: "",
-    description: "",
+    description: initialConcern ?? "", // ← add this
   });
+
+useEffect(() => {
+  if (open) {
+    setForm((f) => ({ ...f, description: initialConcern ?? "" }));
+    setSubmitted(false);
+  }
+}, [open, initialConcern]);
+  
+  
+  
 
   const reset = () =>
     setForm({

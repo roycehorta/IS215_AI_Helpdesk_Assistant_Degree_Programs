@@ -7,6 +7,58 @@ import { Send, Sparkles, Ticket } from "lucide-react";
 import { FC, useEffect, useRef, useState } from "react";
 import ChatMessage from "../components/ChatMessage";
 import { Message } from "../types/chat";
+const TypingIndicator: FC = () => {
+  useEffect(() => {
+    // typing sound — subtle click loop
+    const ctx = new AudioContext();
+    let stopped = false;
+
+    const playTick = () => {
+      if (stopped) return;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = 600 + Math.random() * 200;
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.05);
+      setTimeout(playTick, 80 + Math.random() * 120);
+    };
+
+    playTick();
+    return () => {
+      stopped = true;
+      ctx.close();
+    };
+  }, []);
+
+  return (
+    <div className="flex gap-3 flex-row mb-6">
+      {/* Avatar */}
+      <div className="shrink-0 w-8 h-8 rounded-full bg-primary flex items-center justify-center overflow-hidden">
+        <img src="/oblation.png" alt="UP" className="w-6 h-6 object-contain" />
+      </div>
+
+      {/* Bubble */}
+      <div className="bg-white border border-gray-100 rounded-2xl rounded-tl-none px-5 py-4 shadow-sm flex items-center gap-1.5">
+        <span
+          className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+          style={{ animationDelay: "0ms", animationDuration: "0.9s" }}
+        />
+        <span
+          className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+          style={{ animationDelay: "180ms", animationDuration: "0.9s" }}
+        />
+        <span
+          className="w-2 h-2 rounded-full bg-gray-400 animate-bounce"
+          style={{ animationDelay: "360ms", animationDuration: "0.9s" }}
+        />
+      </div>
+    </div>
+  );
+};
 
 interface ChatPageProps {
   chatState: {
@@ -34,9 +86,13 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
     .reverse()
     .find((m) => m.sender === "bot");
 
-    const hasActionLinks = typeof lastBotMessage?.text === "string" 
-  ? lastBotMessage.text.includes("#action") 
-  : false;
+  const lastUserMessage =
+    [...messages].reverse().find((m) => m.sender === "user")?.text ?? "";
+
+  const hasActionLinks =
+    typeof lastBotMessage?.text === "string"
+      ? lastBotMessage.text.includes("#action")
+      : false;
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -44,9 +100,7 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
     }
   }, [messages.length]);
 
-  const hasBotReply = messages.some(
-    (m) => m.sender === "bot" && messages.indexOf(m) > 0,
-  );
+const hasBotReply = messages.filter((m) => m.sender === "bot").length > 1;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -86,7 +140,15 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
       >
         <div className="mx-auto flex max-w-3xl flex-col gap-4 px-4 py-6">
           {messages.map((msg, i) => (
-            <ChatMessage key={i} message={msg} onQuickReply={sendMessage} />
+            <ChatMessage
+              key={msg.timestamp ?? i}
+              message={msg}
+              index={i}
+              isNew={
+                msg.sender === "bot" && i === messages.length - 1 && !isTyping
+              }
+              onQuickReply={sendMessage}
+            />
           ))}
           {/* Show suggestion cards after welcome message only */}
           {messages.length === 1 && (
@@ -94,11 +156,7 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
               <SuggestionCards onSelect={sendMessage} />
             </div>
           )}
-          {isTyping && (
-            <div className="text-xs text-muted-foreground animate-pulse">
-              Advisor is typing...
-            </div>
-          )}
+          {isTyping && <TypingIndicator />}
         </div>
         {!isTyping &&
           messages.length > 1 &&
@@ -166,6 +224,7 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
       <TicketDialog
         open={ticketDialogOpen}
         onOpenChange={setTicketDialogOpen}
+        initialConcern={lastUserMessage} //
         transcript={messages.map((m, i) => ({
           id: String(i),
           role: m.sender === "bot" ? "bot" : "user",

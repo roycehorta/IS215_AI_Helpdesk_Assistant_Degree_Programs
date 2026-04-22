@@ -78,7 +78,8 @@ const TicketsView: FC<Props> = ({ tickets, setTickets }) => {
           question: string;
         }) => ({
           id: t.ticketId,
-          user: t.email || t.name,
+          user: t.email,
+          name: t.name ?? "",
           subject: t.category || "general",
           status: statusMap[t.status] ?? "New",
           date: t.createdAt ? t.createdAt.split("T")[0] : "",
@@ -134,19 +135,21 @@ const TicketsView: FC<Props> = ({ tickets, setTickets }) => {
     );
   };
 
-  const handleSendReply = (replyText: string) => {
+  // ✅ Match the new TicketModal interface
+  const handleSendReply = (replyText: string, newStatus: Ticket["status"]) => {
     if (!selectedTicket) return;
     setTickets((prev) =>
-      prev.map(
-        (t) => (t.id === selectedTicket.id ? { ...t, status: "Answered" } : t), // ← auto-answer
+      prev.map((t) =>
+        t.id === selectedTicket.id ? { ...t, status: newStatus } : t,
       ),
     );
     setSelectedTicket(null);
   };
-
   const handleAddTicket = (ticket: Ticket) => {
-    setTickets((prev) => [ticket, ...prev]);
+    setTickets((prev) => [ticket, ...prev]); // ← adds to top
     setIsAdding(false);
+    setSort("newest"); // ← force newest first
+    setPage(1); // ← go back to page 1
   };
 
   // Status counts for filter pills
@@ -318,10 +321,11 @@ const TicketsView: FC<Props> = ({ tickets, setTickets }) => {
                       </td>
                       <td className="px-5 py-4">
                         <p className="text-sm font-medium text-gray-900 leading-tight">
-                          {t.user
-                            .split("@")[0]
-                            .replace(/[._]/g, " ")
-                            .replace(/\b\w/g, (c) => c.toUpperCase())}
+                          {t.name ||
+                            t.user
+                              .split("@")[0]
+                              .replace(/[._]/g, " ")
+                              .replace(/\b\w/g, (c) => c.toUpperCase())}
                         </p>
                         <p className="text-[11px] text-gray-400 mt-0.5">
                           {t.user}
@@ -442,7 +446,6 @@ const TicketsView: FC<Props> = ({ tickets, setTickets }) => {
         <TicketModal
           ticket={selectedTicket}
           onClose={() => setSelectedTicket(null)}
-          onStatusChange={handleStatusChange}
           onSendReply={handleSendReply}
         />
       )}

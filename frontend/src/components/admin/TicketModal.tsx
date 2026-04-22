@@ -1,11 +1,10 @@
 // frontend/src/components/admin/TicketModal.tsx
-import { FC, useState } from "react";
+import { FC, useEffect, useState } from "react";
 import { Ticket, getStatusBadge } from "../../types/ticket";
 
 interface TicketModalProps {
   ticket: Ticket;
   onClose: () => void;
-  onStatusChange: (newStatus: Ticket["status"]) => void;
   onSendReply: (replyText: string, newStatus: Ticket["status"]) => void;
 }
 
@@ -14,22 +13,32 @@ const TicketModal: FC<TicketModalProps> = ({
   onClose,
   onSendReply,
 }) => {
-  const [replyText, setReplyText]   = useState("");
-  const [localStatus, setLocalStatus] = useState<Ticket["status"]>(ticket.status); // ← local only
-  const [sending, setSending]       = useState(false);
+  const [replyText, setReplyText] = useState("");
+  const [localStatus, setLocalStatus] = useState<Ticket["status"]>(
+    ticket.status,
+  );
+  const [sending, setSending] = useState(false);
+  const [successToast, setSuccessToast] = useState(false);
+
+  // Auto-dismiss toast after 4 seconds
+  useEffect(() => {
+    if (!successToast) return;
+    const timer = setTimeout(() => setSuccessToast(false), 4000);
+    return () => clearTimeout(timer);
+  }, [successToast]);
 
   const handleSend = async () => {
     if (!replyText.trim()) return;
     setSending(true);
     try {
       const response = await fetch(import.meta.env.VITE_API_URL, {
-        method:  "POST",
+        method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          _route:      "send-reply",
-          ticketId:    ticket.id,
-          toEmail:     ticket.user,
-          studentName: ticket.user.split("@")[0].replace(/[._]/g, " "),
+          _route: "send-reply",
+          ticketId: ticket.id,
+          toEmail: ticket.user,
+          studentName: ticket.name || ticket.user.split("@")[0].replace(/[._]/g, " "),
           replyText,
         }),
       });
@@ -37,9 +46,9 @@ const TicketModal: FC<TicketModalProps> = ({
       const data = await response.json();
       if (!response.ok) throw new Error(data.error ?? "Failed to send");
 
-      // ✅ Only update parent state AFTER successful send
       onSendReply(replyText, localStatus);
-
+      setReplyText("");
+      setSuccessToast(true); // Show success feedback
     } catch (err) {
       console.error("Send reply error:", err);
       alert("Failed to send reply. Please try again.");
@@ -51,44 +60,100 @@ const TicketModal: FC<TicketModalProps> = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/30 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden">
-
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-gray-100 bg-gray-50">
           <div>
-            <h3 className="text-xl font-bold text-gray-800 capitalize">{ticket.subject}</h3>
+            <h3 className="text-xl font-bold text-gray-800 capitalize">
+              {ticket.subject}
+            </h3>
             <p className="text-sm text-gray-500 mt-1">
-              Ticket ID: <span className="font-mono font-bold text-primary">{ticket.id}</span> · Opened: {ticket.date}
+              Ticket ID:{" "}
+              <span className="font-mono font-bold text-primary">
+                {ticket.id}
+              </span>{" "}
+              · Opened: {ticket.date}
             </p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl font-bold p-2">
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-2xl font-bold p-2"
+          >
             &times;
           </button>
         </div>
 
+        {/* Success toast */}
+        {successToast && (
+          <div className="mx-6 mt-4 flex items-center gap-3 p-3.5 bg-green-50 border border-green-200 rounded-xl text-sm text-green-800 animate-[fade-in_0.2s_ease-out]">
+            <div className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-green-200">
+              <svg
+                className="w-3.5 h-3.5 text-green-700"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </div>
+            <div className="flex-1">
+              <span className="font-semibold">Reply sent successfully.</span>{" "}
+              Status updated to{" "}
+              <span className="font-bold capitalize">{localStatus}</span> and
+              email delivered to{" "}
+              <span className="font-bold">{ticket.user}</span>.
+            </div>
+            <button
+              onClick={() => setSuccessToast(false)}
+              className="text-green-500 hover:text-green-700 text-lg font-bold leading-none"
+            >
+              &times;
+            </button>
+          </div>
+        )}
+
         {/* Body */}
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
-
           {/* Meta */}
           <div className="flex flex-wrap gap-4 justify-between items-center bg-gray-50 p-4 rounded-xl border border-gray-100">
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Reported By</p>
-              <p className="text-sm font-medium text-primary">{ticket.user}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">
+                Reported By
+              </p>
+              <p className="text-sm font-bold text-gray-800">
+                {ticket.name || "—"}
+              </p>
+              <p className="text-xs text-primary mt-0.5">{ticket.user}</p>
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Category</p>
-              <p className="text-sm font-medium text-gray-700 capitalize">{ticket.subject}</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">
+                Category
+              </p>
+              <p className="text-sm font-medium text-gray-700 capitalize">
+                {ticket.subject}
+              </p>
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Current Status</p>
-              <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${getStatusBadge(ticket.status)}`}>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">
+                Current Status
+              </p>
+              <span
+                className={`text-xs font-bold px-2.5 py-1 rounded-full border ${getStatusBadge(ticket.status)}`}
+              >
                 {ticket.status}
               </span>
             </div>
             <div>
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">Mark as</p>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-1">
+                Mark as
+              </p>
               <select
                 value={localStatus}
-                onChange={(e) => setLocalStatus(e.target.value as Ticket["status"])}
+                onChange={(e) =>
+                  setLocalStatus(e.target.value as Ticket["status"])
+                }
                 className={`text-sm font-bold rounded-lg border outline-none cursor-pointer py-1.5 px-3 ${getStatusBadge(localStatus)}`}
               >
                 <option value="New">New</option>
@@ -99,7 +164,9 @@ const TicketModal: FC<TicketModalProps> = ({
 
           {/* Original concern */}
           <div>
-            <h4 className="text-sm font-bold text-gray-700 mb-2">Original Inquiry</h4>
+            <h4 className="text-sm font-bold text-gray-700 mb-2">
+              Original Inquiry
+            </h4>
             <div className="bg-white border border-gray-200 rounded-xl p-4 text-sm text-gray-800 leading-relaxed">
               {ticket.details || "No further details provided."}
             </div>
@@ -107,7 +174,9 @@ const TicketModal: FC<TicketModalProps> = ({
 
           {/* Reply box */}
           <div>
-            <h4 className="text-sm font-bold text-gray-700 mb-2">Admin Reply</h4>
+            <h4 className="text-sm font-bold text-gray-700 mb-2">
+              Admin Reply
+            </h4>
             <textarea
               value={replyText}
               onChange={(e) => setReplyText(e.target.value)}
@@ -118,11 +187,40 @@ const TicketModal: FC<TicketModalProps> = ({
 
           {/* Signature */}
           <div className="bg-gray-50 border border-gray-100 rounded-xl p-4 text-xs text-gray-500 space-y-1">
-            <p className="font-semibold text-gray-600">Helpdesk Admin — UPOU Helpdesk Team</p>
-            <p>🌐 <a href="https://upou.edu.ph" className="text-primary hover:underline">upou.edu.ph</a></p>
-            <p>📧 <a href="mailto:info@upou.edu.ph" className="text-primary hover:underline">info@upou.edu.ph</a></p>
-            <p>📘 <a href="https://facebook.com/upouofficial" className="text-primary hover:underline">facebook.com/upouofficial</a></p>
-            <p className="text-gray-400 text-[10px] pt-1">University of the Philippines Open University · Los Baños, Laguna 4031</p>
+            <p className="font-semibold text-gray-600">
+              Helpdesk Admin — UPOU Helpdesk Team
+            </p>
+            <p>
+              🌐{" "}
+              <a
+                href="https://upou.edu.ph"
+                className="text-primary hover:underline"
+              >
+                upou.edu.ph
+              </a>
+            </p>
+            <p>
+              📧{" "}
+              <a
+                href="mailto:info@upou.edu.ph"
+                className="text-primary hover:underline"
+              >
+                info@upou.edu.ph
+              </a>
+            </p>
+            <p>
+              📘{" "}
+              <a
+                href="https://facebook.com/upouofficial"
+                className="text-primary hover:underline"
+              >
+                facebook.com/upouofficial
+              </a>
+            </p>
+            <p className="text-gray-400 text-[10px] pt-1">
+              University of the Philippines Open University · Los Baños, Laguna
+              4031
+            </p>
           </div>
         </div>
 

@@ -14,28 +14,10 @@ import { Ticket } from "./types/ticket";
 
 const queryClient = new QueryClient();
 
-const INITIAL_TICKETS: Ticket[] = [
-  {
-    id: "TKT-1023",
-    user: "juan.delacruz@upou.edu.ph",
-    subject: "FICS info is not available.",
-    status: "New",
-    date: "2026-04-08",
-    details: "I forgot my password...",
-  },
-  {
-    id: "TKT-1022",
-    user: "maria.clara@upou.edu.ph",
-    subject: "Nursing Related Degree",
-    status: "Answered",
-    date: "2026-04-07",
-    details: "Getting a 500 error...",
-  },
-];
 
 // Separate layout component so hooks work inside BrowserRouter
 const AppLayout = () => {
-  const [tickets, setTickets] = useState<Ticket[]>(INITIAL_TICKETS);
+  const [tickets, setTickets] = useState<Ticket[]>([]);
   const handleAddTicket = (newTicket: Ticket) =>
     setTickets((prev) => [newTicket, ...prev]);
   const chatState = useChatbot(handleAddTicket);
