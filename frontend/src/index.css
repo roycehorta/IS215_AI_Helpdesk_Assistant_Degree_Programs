@@ -15,7 +15,7 @@
   --color-accent-foreground: hsl(224 71% 4%);
 
   /* Sidebar */
-  --color-sidebar: hsl(0 72% 22%);
+  /* --color-sidebar: hsl(0 72% 22%);
   --color-sidebar-background: hsl(0 72% 22%);
   --color-sidebar-foreground: hsl(0 0% 100%);
   --color-sidebar-primary: hsl(0 72% 15%);
@@ -23,7 +23,18 @@
   --color-sidebar-accent: hsl(0 60% 30%);
   --color-sidebar-accent-foreground: hsl(0 0% 100%);
   --color-sidebar-border: hsl(0 50% 30%);
-  --color-sidebar-ring: hsl(0 72% 28%);
+  --color-sidebar-ring: hsl(0 72% 28%); */
+
+  /* Sidebar — light style matching UPOU student portal */
+--color-sidebar: hsl(0 0% 98%);
+--color-sidebar-background: hsl(0 0% 98%);
+--color-sidebar-foreground: hsl(224 71% 4%);
+--color-sidebar-primary: hsl(0 72% 28%);
+--color-sidebar-primary-foreground: hsl(0 0% 100%);
+--color-sidebar-accent: hsl(0 72% 28%);
+--color-sidebar-accent-foreground: hsl(0 0% 100%);
+--color-sidebar-border: hsl(220 13% 91%);
+--color-sidebar-ring: hsl(0 72% 28%);
 }
 
 :root {
@@ -96,4 +107,12 @@ body {
 
 .prose tbody tr {
   border-bottom: 1px solid #e5e7eb;
+}
+
+
+
+/* SHADCN MODS */
+/* Hide default Dialog close button */
+[data-radix-dialog-close] {
+  display: none !important;
 }

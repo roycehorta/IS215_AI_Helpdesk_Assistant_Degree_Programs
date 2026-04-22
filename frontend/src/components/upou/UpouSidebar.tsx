@@ -14,7 +14,15 @@ import {
 } from "@/components/ui/sidebar";
 import type { Conversation } from "@/lib/chat-storage";
 import { cn } from "@/lib/utils";
-import { History, MessageSquarePlus, MessagesSquare, Trash2 } from "lucide-react";
+import {
+  BookOpen,
+  CheckSquare,
+  History,
+  LayoutDashboard,
+  MessageSquarePlus,
+  MessagesSquare,
+  Trash2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 type Props = {
@@ -25,18 +33,32 @@ type Props = {
   onDelete: (id: string) => void;
 };
 
-export function UpouSidebar({ conversations, activeId, onNewChat, onSelect, onDelete }: Props) {
+export function UpouSidebar({
+  conversations,
+  activeId,
+  onNewChat,
+  onSelect,
+  onDelete,
+}: Props) {
   const navigate = useNavigate(); // ← add this line
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="border-b border-sidebar-border/60">
         <div className="flex items-center gap-2 px-1 py-2">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg  text-sidebar-primary-foreground">
-          <img src="/src/img/up.png" alt="UP Logo" className="h-12 w-12 object-contain" />
-        </div>
+            <img
+              src="/src/img/up.png"
+              alt="UP Logo"
+              className="h-12 w-12 object-contain"
+            />
+          </div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-bold text-sidebar-foreground">UPOU Helpdesk</span>
-            <span className="text-[11px] text-sidebar-foreground/70">AI-Powered Support</span>
+            <span className="text-sm font-bold text-sidebar-foreground">
+              UPOU Helpdesk
+            </span>
+            <span className="text-[11px] text-sidebar-foreground/70">
+              AI-Powered Support
+            </span>
           </div>
         </div>
         <div className="px-1 pb-2 group-data-[collapsible=icon]:hidden">
@@ -63,19 +85,51 @@ export function UpouSidebar({ conversations, activeId, onNewChat, onSelect, onDe
 
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupLabel className="text-sidebar-foreground/70">Navigation</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-sidebar-foreground/70">
+            Navigation
+          </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  isActive
+                  onClick={() => navigate("/")}
+                  isActive={location.pathname === "/"}
                   className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
                 >
                   <MessagesSquare className="h-4 w-4" />
                   <span>AI Chat</span>
                 </SidebarMenuButton>
               </SidebarMenuItem>
-
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/checklist")}
+                  isActive={location.pathname === "/checklist"}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
+                >
+                  <CheckSquare className="h-4 w-4" />
+                  <span>Checklist</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/admin")}
+                  isActive={location.pathname === "/admin"}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  <span>Admin</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  onClick={() => navigate("/about")}
+                  isActive={location.pathname === "/about"}
+                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
+                >
+                  <BookOpen className="h-4 w-4" />
+                  <span>About</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
               <SidebarMenuItem>
                 {/* <SidebarMenuButton
                   onClick={() => navigate('/admin')}
@@ -95,7 +149,6 @@ export function UpouSidebar({ conversations, activeId, onNewChat, onSelect, onDe
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              
               {conversations.length === 0 && (
                 <li className="px-2 py-2 text-xs text-sidebar-foreground/60 group-data-[collapsible=icon]:hidden">
                   No conversations yet.
