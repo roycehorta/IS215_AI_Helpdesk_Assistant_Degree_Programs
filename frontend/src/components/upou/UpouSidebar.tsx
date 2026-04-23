@@ -11,6 +11,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import type { Conversation } from "@/lib/chat-storage";
 import { cn } from "@/lib/utils";
@@ -40,7 +41,8 @@ export function UpouSidebar({
   onSelect,
   onDelete,
 }: Props) {
-  const navigate = useNavigate(); // ← add this line
+  const navigate = useNavigate(); // 
+  const { setOpenMobile, isMobile } = useSidebar();
   return (
     <Sidebar collapsible="offcanvas">
       <SidebarHeader className="border-b border-sidebar-border/60">
@@ -92,7 +94,7 @@ export function UpouSidebar({
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => navigate("/")}
+                  onClick={() => { navigate("/"); if (isMobile) setOpenMobile(false); }}
                   isActive={location.pathname === "/"}
                   className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
                 >
@@ -102,7 +104,7 @@ export function UpouSidebar({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => navigate("/checklist")}
+                  onClick={() => { navigate("/checklist"); if (isMobile) setOpenMobile(false); }}
                   isActive={location.pathname === "/checklist"}
                   className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
                 >
@@ -112,7 +114,7 @@ export function UpouSidebar({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => navigate("/admin")}
+                  onClick={() => { navigate("/admin"); if (isMobile) setOpenMobile(false); }}
                   isActive={location.pathname === "/admin"}
                   className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
                 >
@@ -122,7 +124,7 @@ export function UpouSidebar({
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  onClick={() => navigate("/about")}
+                  onClick={() => { navigate("/about"); if (isMobile) setOpenMobile(false); }}
                   isActive={location.pathname === "/about"}
                   className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
                 >
@@ -157,7 +159,7 @@ export function UpouSidebar({
               {conversations.map((c) => (
                 <SidebarMenuItem key={c.id}>
                   <SidebarMenuButton
-                    onClick={() => onSelect(c.id)}
+                    onClick={() => { onSelect(c.id); if (isMobile) setOpenMobile(false); }}
                     isActive={c.id === activeId}
                     className={cn(
                       "group/item justify-between",

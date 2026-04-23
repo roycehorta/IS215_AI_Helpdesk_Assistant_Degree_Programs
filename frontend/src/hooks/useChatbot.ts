@@ -1,5 +1,5 @@
 // frontend/src/hooks/useChatbot.ts
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   deriveTitle,
   loadConversations,
@@ -14,11 +14,7 @@ interface ChatResponse {
 }
 
 export const MENUS = {
-  LEVEL_0: [
-    "Browse by Academic Level",
-    "Browse by Faculty Division",
-    "Browse by Academic Calendar",
-  ],
+  LEVEL_0: ["Browse by Academic Level", "Browse by Faculty Division"],
   LEVEL_1_LEVELS: [
     "Undergraduate",
     "Graduate Certificates",
@@ -31,7 +27,6 @@ export const MENUS = {
     "Information and Communication Studies (FICS)",
     "Management and Development Studies (FMDS)",
   ],
-  LEVEL_1_CALENDAR: ["Trimester Programs", "Semester Programs"],
   LEVEL_3_TRAPPER: [
     "Yes, back to Main Menu",
     "No, open an IT Helpdesk Ticket",
@@ -56,17 +51,20 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentMenu, setCurrentMenu] = useState<string[]>(MENUS.LEVEL_0);
-  // to:
   const [ticketStep, setTicketStep] = useState<
     "idle" | "subject" | "description" | "email"
   >("idle");
-
   const [draftTicket, setDraftTicket] = useState<{
     subject?: string;
     details?: string;
   }>({});
   const [ticketDialogOpen, setTicketDialogOpen] = useState(false);
   const [hydrated, setHydrated] = useState(false);
+
+  // trapper flag — set to true when 3rd API call completes
+  // actual message fires only after animation completes via onAnimationComplete
+  const shouldShowTrapperRef = useRef(false);
+  const onAnimationCompleteRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const stored = loadConversations();
@@ -105,6 +103,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
     setTicketStep("idle");
     setDraftTicket({});
     setApiCallCount(0);
+    shouldShowTrapperRef.current = false;
   };
 
   const handleSelectConversation = (id: string) => {
@@ -141,6 +140,22 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
     setConversations((prev) => [newConvo, ...prev]);
     setActiveId(newId);
     return newId;
+  };
+
+  // Called by ChatPage when the last bot message finishes animating
+  const handleAnimationComplete = () => {
+    if (shouldShowTrapperRef.current) {
+      shouldShowTrapperRef.current = false;
+      setMessages((prev) => [
+        ...prev,
+        {
+          text: "Did you get what you're looking for?",
+          sender: "bot" as const,
+          timestamp: Date.now(),
+        },
+      ]);
+      setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
+    }
   };
 
   // ==========================================
@@ -253,12 +268,22 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       return true;
     }
 
-    // to:
+    if (
+      lower.includes("open a support ticket") ||
+      lower.includes("open ticket") ||
+      lower.includes("open support ticket") ||
+      lower.includes("open an it helpdesk ticket") ||
+      lower.includes("open an it ticket")
+    ) {
+      setTicketDialogOpen(true);
+      return true;
+    }
+
     if (
       lower.includes("open an it helpdesk ticket") ||
       lower.includes("open an it ticket")
     ) {
-      setTicketDialogOpen(true); // just open dialog, no message added
+      setTicketDialogOpen(true);
       return true;
     }
 
@@ -316,24 +341,6 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       return true;
     }
 
-    if (lower === "browse by academic calendar") {
-      setMessages((prev) => [...prev, { text, sender: "user" }]);
-      setCurrentMenu(MENUS.LEVEL_1_CALENDAR);
-      setTimeout(
-        () =>
-          setMessages((prev) => [
-            ...prev,
-            {
-              text: "Please select a calendar type:\n* [Trimester Programs](#action)\n* [Semester Programs](#action)",
-              sender: "bot",
-              timestamp: Date.now(),
-            },
-          ]),
-        400,
-      );
-      return true;
-    }
-
     if (lower === "trimester programs") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
       setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
@@ -367,6 +374,15 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
   // PHASE 3: MAIN EXECUTOR
   // ==========================================
   const sendMessage = async (text: string) => {
+    if (text.startsWith("__TOR_RESULT__:")) {
+      const recommendation = text.replace("__TOR_RESULT__:", "");
+      setMessages((prev) => [
+        ...prev,
+        { text: recommendation, sender: "bot" as const, timestamp: Date.now() },
+      ]);
+      return;
+    }
+
     if (!text.trim()) return;
     const lower = text.toLowerCase();
     if (handleTicketing(text, lower)) return;
@@ -384,13 +400,10 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       /* noop */
     }
 
-    const historyPayload = messages.slice(-6).map((msg) => ({
+    const historyPayload = messages.slice(-4).map((msg) => ({
       role: msg.sender === "bot" ? "assistant" : "user",
-      content: msg.text,
+      content: msg.sender === "bot" ? "" : msg.text,
     }));
-
-    console.log("Sending to API:", { question: text, history: historyPayload });
-    console.log("API URL:", import.meta.env.VITE_API_URL);
 
     try {
       const response = await fetch(import.meta.env.VITE_API_URL, {
@@ -402,24 +415,15 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
 
       setMessages((prev) => [
         ...prev,
-        { text: data.answer, sender: "bot", timestamp: Date.now() },
+        { text: data.answer, sender: "bot" as const, timestamp: Date.now() },
       ]);
 
       const newCount = apiCallCount + 1;
       setApiCallCount(newCount);
 
       if (newCount % 3 === 0) {
-        setTimeout(() => {
-          setMessages((prev) => [
-            ...prev,
-            {
-              text: "Did you get what you're looking for?",
-              sender: "bot",
-              timestamp: Date.now(),
-            },
-          ]);
-          setCurrentMenu(MENUS.LEVEL_3_TRAPPER);
-        }, 600);
+        // Set flag — trapper fires AFTER animation completes
+        shouldShowTrapperRef.current = true;
       } else {
         setCurrentMenu([]);
       }
@@ -428,7 +432,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
         ...prev,
         {
           text: "Connection error. Please try again.",
-          sender: "bot",
+          sender: "bot" as const,
           timestamp: Date.now(),
         },
       ]);
@@ -451,5 +455,6 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
     handleNewChat,
     handleSelectConversation,
     handleDeleteConversation,
+    handleAnimationComplete,
   };
 };
