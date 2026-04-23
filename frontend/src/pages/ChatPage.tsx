@@ -3,11 +3,14 @@ import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { SuggestionCards } from "@/components/upou/SuggestionCards";
 import { TicketDialog } from "@/components/upou/TicketDialog";
-import { Send, Sparkles, Ticket } from "lucide-react";
+import { FileText, Send, Ticket } from "lucide-react";
 import { FC, useEffect, useRef, useState } from "react";
 import ChatMessage from "../components/ChatMessage";
 import { Message } from "../types/chat";
+
 const TypingIndicator: FC = () => {
+  
+
   useEffect(() => {
     // typing sound — subtle click loop
     const ctx = new AudioContext();
@@ -81,6 +84,12 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
   } = chatState;
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [showUploader, setShowUploader] = useState(false);
+
+  const handleTORResult = (recommendation: string) => {
+    setShowUploader(false);
+    sendMessage(`[TOR Analysis Result]: ${recommendation}`);
+  };
 
   const lastBotMessage = [...messages]
     .reverse()
@@ -100,7 +109,7 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
     }
   }, [messages.length]);
 
-const hasBotReply = messages.filter((m) => m.sender === "bot").length > 1;
+  const hasBotReply = messages.filter((m) => m.sender === "bot").length > 1;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,9 +124,9 @@ const hasBotReply = messages.filter((m) => m.sender === "bot").length > 1;
       <header className="flex h-14 items-center gap-3 border-b border-border bg-card px-4">
         <SidebarTrigger className="text-foreground" />
         <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
+          {/* <div className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
             <Sparkles className="h-4 w-4" />
-          </div>
+          </div> */}
           <div>
             <h1 className="text-sm font-semibold leading-none text-foreground">
               UPOU AI Helpdesk
@@ -181,7 +190,7 @@ const hasBotReply = messages.filter((m) => m.sender === "bot").length > 1;
         <div className="mx-auto max-w-3xl">
           {hasBotReply && (
             <div className="mb-2 flex justify-end">
-              <Button
+              {/* <Button
                 type="button"
                 variant="outline"
                 size="sm"
@@ -190,9 +199,35 @@ const hasBotReply = messages.filter((m) => m.sender === "bot").length > 1;
               >
                 <Ticket className="h-4 w-4" />
                 Convert to Ticket
-              </Button>
+              </Button> */}
+              {hasBotReply && (
+                <div className="mb-2 flex justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowUploader((v) => !v)}
+                    className="gap-2 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <FileText className="h-4 w-4" />
+                    Upload TOR / Diploma
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setTicketDialogOpen(true)}
+                    className="gap-2 border-primary/30 text-primary hover:bg-primary hover:text-primary-foreground"
+                  >
+                    <Ticket className="h-4 w-4" />
+                    Convert to Ticket
+                  </Button>
+                </div>
+              )}
             </div>
           )}
+
+          
           <form
             onSubmit={handleSubmit}
             className="flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1.5 shadow-sm focus-within:border-primary/50"

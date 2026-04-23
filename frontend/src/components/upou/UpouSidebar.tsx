@@ -42,7 +42,7 @@ export function UpouSidebar({
 }: Props) {
   const navigate = useNavigate(); // ← add this line
   return (
-    <Sidebar collapsible="icon">
+    <Sidebar collapsible="offcanvas">
       <SidebarHeader className="border-b border-sidebar-border/60">
         <div className="flex items-center gap-2 px-1 py-2">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg  text-sidebar-primary-foreground">
