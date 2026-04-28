@@ -102,7 +102,7 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
         <SidebarTrigger className="text-foreground" />
         <div>
           <h1 className="text-sm font-semibold leading-none text-foreground">UPOU AI Helpdesk</h1>
-          <p className="mt-0.5 text-[11px] text-muted-foreground">Degree programs</p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">Degree Programs</p>
         </div>
       </header>
 
