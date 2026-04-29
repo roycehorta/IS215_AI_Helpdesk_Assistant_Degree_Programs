@@ -12,15 +12,15 @@ import {
 import { useState } from "react";
 
 const TEAM = [
-  { name: "Aquino, Jade",          role: "Backend, Lambda, AWS Integration"         },
-  { name: "Ayes, Mari Cris",       role: "Frontend, UI Components"                  },
-  { name: "Adel, Deo Rico",        role: "Data Scraping, S3 Knowledge Base"         },
-  { name: "Bautista, Katrina Mae", role: "S3 Setup, Data Preparation"               },
-  { name: "Evidor, Darvin",        role: "EC2, Deployment"                          },
-  { name: "Hortaleza, Royce",      role: "Frontend, Chat UI"                        },
-  { name: "Joaquin, John Rainer",  role: "EC2, Lambda Triggers"                     },
-  { name: "Llenado, Daryljade",    role: "Backend, RAG Pipeline, Ticketing"         },
-  { name: "Molina, Yolanda",       role: "Documentation, Testing"                   },
+  { name: "Aquino, Jade",          role: "Backend, Lambda, AWS Integration, Git Repo Supervision" },
+  { name: "Ayes, Mari Cris",       role: "Test Scenarios Creation, Lambda Functions"              },
+  { name: "Adel, Deo Rico",        role: "Data Scraping, S3 Knowledge Base"                      },
+  { name: "Bautista, Katrina Mae", role: "S3 Setup, RAG Pipeline, Data Preparation, Progress Report" },
+  { name: "Evidor, Darvin",        role: "System Prompts, Lambda Functions"                      },
+  { name: "Hortaleza, Royce",      role: "Frontend, Chat UI, Admin UI, UI Components"            },
+  { name: "Joaquin, John Rainer",  role: "Testing Lambda Triggers"                               },
+  { name: "Llenado, Daryljade",    role: "Frontend, UI Components, Ticketing, Prompt Engineering" },
+  { name: "Molina, Yolanda",       role: "Documentation, Testing"                                },
 ];
 
 const TECH_STACK = [
