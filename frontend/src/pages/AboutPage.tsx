@@ -18,9 +18,9 @@ const TEAM = [
   { name: "Bautista, Katrina Mae", role: "S3 Setup, RAG Pipeline, Data Preparation, Progress Report" },
   { name: "Evidor, Darvin",        role: "System Prompts, Lambda Functions"                      },
   { name: "Hortaleza, Royce",      role: "Frontend, Chat UI, Admin UI, UI Components"            },
-  { name: "Joaquin, John Rainer",  role: "Testing Lambda Triggers"                               },
+  { name: "Joaquin, John Rainer",  role: "System Prompts, Lambda Functions and Triggers"                               },
   { name: "Llenado, Daryljade",    role: "Frontend, UI Components, Ticketing, Prompt Engineering" },
-  { name: "Molina, Yolanda",       role: "Documentation, Testing"                                },
+  { name: "Molina, Yolanda",       role: "Documentation, Testing, Lambda Functions"                                },
 ];
 
 const TECH_STACK = [
