@@ -52,6 +52,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentMenu, setCurrentMenu] = useState<string[]>(MENUS.LEVEL_0);
+  const recentQuestionsRef = useRef<string[]>([]);
   const [ticketStep, setTicketStep] = useState<
     "idle" | "subject" | "description" | "email"
   >("idle");
@@ -103,6 +104,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
     setTicketStep("idle");
     setDraftTicket({});
     setApiCallCount(0);
+    recentQuestionsRef.current = [];
     shouldShowTrapperRef.current = false;
   };
 
@@ -279,7 +281,6 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       return true;
     }
 
-
     if (lower === "continue chat") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
       setCurrentMenu([]);
@@ -398,11 +399,23 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       content: msg.sender === "bot" ? "" : msg.text,
     }));
 
+    const questionCount = recentQuestionsRef.current.filter(
+      (q) => q.toLowerCase() === text.toLowerCase(),
+    ).length;
+    recentQuestionsRef.current = [
+      ...recentQuestionsRef.current.slice(-10),
+      text.toLowerCase(),
+    ];
+
     try {
       const response = await fetch(import.meta.env.VITE_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: text, history: historyPayload }),
+        body: JSON.stringify({
+          question: text,
+          history: historyPayload,
+          repeatCount: questionCount,
+        }),
       });
       const data: ChatResponse = await response.json();
 
@@ -415,12 +428,14 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       setApiCallCount(newCount);
 
       const isRelevant = data.isRelevant ?? true;
+      const hasTicketLink =
+        data.answer?.includes("[Open a Support Ticket](#action)") ?? false;
 
-      if (!isRelevant) {
-        // Bot couldn't answer — show trapper immediately after animation
+      if (!isRelevant && !hasTicketLink) {
         shouldShowTrapperRef.current = true;
+      } else if (!isRelevant && hasTicketLink) {
+        setCurrentMenu([]);
       } else if (newCount % 3 === 0) {
-        // Every 3rd API call — show trapper after animation
         shouldShowTrapperRef.current = true;
       } else {
         setCurrentMenu([]);
