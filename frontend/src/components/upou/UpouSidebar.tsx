@@ -17,19 +17,17 @@ import type { Conversation } from "@/lib/chat-storage";
 import { cn } from "@/lib/utils";
 import {
   BookOpen,
-  CheckSquare,
   ClipboardList,
   History,
   LayoutDashboard,
   MessageSquarePlus,
-  MessagesSquare,
+  MessagesSquare
 } from "lucide-react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 // ── Add or remove nav items here only ─────────────────────────
 const NAV_ITEMS = [
   { label: "AI Chat",     path: "/",          icon: MessagesSquare  },
-  { label: "Checklist",   path: "/checklist", icon: CheckSquare     },
   { label: "Admin",       path: "/admin",     icon: LayoutDashboard },
   { label: "About",       path: "/about",     icon: BookOpen        },
   { label: "Update Log",  path: "/updates",   icon: ClipboardList   },
