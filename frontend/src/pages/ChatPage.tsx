@@ -200,7 +200,7 @@ const ChatPage: FC<ChatPageProps> = ({ chatState }) => {
           {showUploader && (
             <div className="mb-3 p-4 border border-primary/20 rounded-xl bg-primary/5">
               <p className="text-xs font-semibold text-primary mb-3">
-                📄 Upload your TOR or Diploma for personalized UPOU program
+                📄 Upload your Diploma or TOR for personalized UPOU program
                 recommendations
               </p>
               <TORUploader onResult={handleTORResult} />

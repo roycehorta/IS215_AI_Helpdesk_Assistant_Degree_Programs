@@ -7,8 +7,8 @@ interface TORUploaderProps {
   onResult: (recommendation: string) => void;
 }
 
-const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png", "application/pdf"];
-const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".pdf"];
+const ALLOWED_TYPES = ["image/jpeg", "image/jpg", "image/png"];
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png"];
 const MAX_SIZE_MB = 5;
 
 export function TORUploader({ onResult }: TORUploaderProps) {
@@ -23,11 +23,11 @@ export function TORUploader({ onResult }: TORUploaderProps) {
     // Check extension
     const ext = "." + f.name.split(".").pop()?.toLowerCase();
     if (!ALLOWED_EXTENSIONS.includes(ext)) {
-      return `File type not supported. Please upload JPG, PNG, or PDF only. (.webp, .heic, and other formats are not accepted)`;
+      return `File type not supported. Please upload JPG and PNG only. (PDF, .webp, .heic, and other formats are not accepted)`;
     }
     // Check MIME type
     if (!ALLOWED_TYPES.includes(f.type)) {
-      return `Invalid file type: ${f.type}. Only JPG, PNG, and PDF are supported.`;
+      return `Invalid file type: ${f.type}. Only JPG and PNG are supported.`;
     }
     // Check size
     if (f.size > MAX_SIZE_MB * 1024 * 1024) {
@@ -124,7 +124,7 @@ export function TORUploader({ onResult }: TORUploaderProps) {
         <input
           ref={inputRef}
           type="file"
-          accept=".jpg,.jpeg,.png,.pdf"
+          accept=".jpg,.jpeg,.png"
           className="hidden"
           onChange={(e) => {
             const f = e.target.files?.[0];
@@ -159,10 +159,10 @@ export function TORUploader({ onResult }: TORUploaderProps) {
           <div className="space-y-2">
             <Upload className="h-7 w-7 text-primary/40 mx-auto" />
             <p className="text-sm font-medium text-gray-700">
-              Drop your TOR or Diploma here
+              Drop your Diploma or TOR here
             </p>
             <p className="text-xs text-gray-400">
-              JPG, PNG, PDF only · Max {MAX_SIZE_MB}MB
+              JPG, PNG only · Max {MAX_SIZE_MB}MB
             </p>
             <p className="text-[11px] text-red-400">
               ⚠️ .webp, .heic, and other formats are not supported
@@ -170,6 +170,28 @@ export function TORUploader({ onResult }: TORUploaderProps) {
           </div>
         )}
       </div>
+
+      {/* Sample file link */}
+      <p className="text-xs text-muted-foreground">
+        Don't have a file ready?{" "}
+        <a
+          href="https://drive.google.com/drive/folders/1K3t5O3o7u0Jm1Rjy502_xnHYyEJbUibw?usp=sharing"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-primary underline hover:opacity-80"
+        >
+          Download a sample Diploma here
+        </a>
+      </p>
+
+      {/* Privacy notice */}
+      <p className="text-xs text-muted-foreground flex items-start gap-1">
+        <span className="shrink-0">🔒</span>
+        <span>
+          Your document is only read to generate program recommendations and is
+          never stored. It is deleted from our servers immediately after analysis.
+        </span>
+      </p>
 
       {/* Image preview */}
       {preview && (

@@ -3,6 +3,51 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 
 const UPDATES = [
   {
+    version: "v1.7.0",
+    date: "2026-04-29",
+    items: [
+      "Replaced AWS SES with Brevo transactional email",
+      "3 email triggers: ticket confirmation, admin-created ticket, admin reply",
+      "Full UPOU-branded HTML email template with maroon header and UP seal",
+      "BrevoService.mjs — shared builder functions for header, footer, signature",
+      "test-brevo.mjs — 3/3 email triggers tested",
+      "TORUploader — restricted to JPG/PNG only (Textract does not support PDF)",
+      "TORUploader — added sample TOR download link (Google Drive)",
+      "TORUploader — added privacy notice: document read-only, deleted after analysis",
+      "index.mjs — added ticket-confirmation and admin-ticket routes",
+      "Removed SendReplyService.mjs and SESClient.mjs",
+      "deploy.mjs updated — node_modules included in Lambda zip",
+      "AboutPage — Brevo added to tech stack table",
+      "AboutPage — email notification added as Step 7 in system pipeline",
+      "AboutPage — Week 3 progress updated with latest changes",
+    ],
+  },
+  {
+    version: "v1.6.0",
+    date: "2026-04-29",
+    items: [
+      "TORUploader — added sample TOR download link (Google Drive)",
+      "TORUploader — added privacy notice: document read-only, deleted after analysis",
+      "Repeat detection — frontend tracks last 10 questions per session",
+      "Repeat detection — repeatCount sent to backend on every API call",
+      "1st repeat: gentle recap + mandatory ticket link injected",
+      "2nd+ repeat: humorous going-in-circles response + ticket link",
+      "Post-processing: ticket link guaranteed for all repeat responses",
+      "Trapper logic — skips trapper if bot already offered ticket in answer",
+      "Trapper logic — fires trapper if isRelevant false and no ticket in answer",
+      "Fixed acronym regex — WHAT no longer matches as program acronym",
+      "Rule 22: Faculty browsing shows ALL levels including doctorate",
+      "Rule 23: Tuition/credit transfer questions end with ticket suggestion",
+      "Rule 24: Out-of-scope redirect includes ticket suggestion",
+      "Rule 25: Real-time data questions redirect to UPOU website",
+      "Rule 26: Repeat detection humorous deflection with ticket link",
+      "System prompt updated to 26 strict rules",
+      "test-repeat-detection.mjs — 7 test cases added",
+      "test-decision-matrix.mjs — 15 test cases, token tracking per test",
+      "Bot Reasoning section added to README",
+    ],
+  },
+  {
     version: "v1.5.0",
     date: "2026-04-29",
     items: [
@@ -58,7 +103,7 @@ const UPDATES = [
     date: "2026-04-23",
     items: [
       "Textract integration — TOR/Diploma upload and analysis (Bonus Feature)",
-      "TORUploader component with drag-drop, JPG/PNG/PDF validation",
+      "TORUploader component with drag-drop, JPG/PNG validation",
       "S3 temp/ prefix for Textract uploads — auto-deleted after use",
       "Admin Dashboard — collapsible sidebar, mobile drawer",
       "TicketsView — paginated table with search, filter, sort",
@@ -126,15 +171,21 @@ const UpdateLogPage = () => {
                     {update.version}
                   </span>
                   <span className="text-sm font-semibold text-foreground">
-                    {update.version === "v1.4.0"
-                      ? "Single Program Flow & Faculty Fix"
-                      : update.version === "v1.3.0"
-                        ? "RAG Pipeline & Level Routing Fix"
-                        : update.version === "v1.2.0"
-                          ? "Textract Integration & Admin Dashboard"
-                          : update.version === "v1.1.0"
-                            ? "Chat UI & Responsive Design"
-                            : "Initial Release"}
+                    {update.version === "v1.7.0"
+                      ? "Brevo Email Integration & TOR Uploader Fix"
+                      : update.version === "v1.6.0"
+                        ? "Repeat Detection, Trapper Logic & TOR Privacy"
+                        : update.version === "v1.5.0"
+                          ? "URL Validation, Elective Courses & Test Suite"
+                          : update.version === "v1.4.0"
+                            ? "Single Program Flow & Faculty Fix"
+                            : update.version === "v1.3.0"
+                              ? "RAG Pipeline & Level Routing Fix"
+                              : update.version === "v1.2.0"
+                                ? "Textract Integration & Admin Dashboard"
+                                : update.version === "v1.1.0"
+                                  ? "Chat UI & Responsive Design"
+                                  : "Initial Release"}
                   </span>
                 </div>
                 <span className="text-xs text-muted-foreground">

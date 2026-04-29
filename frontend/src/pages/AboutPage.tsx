@@ -28,9 +28,10 @@ const TECH_STACK = [
   { layer: "Backend",   tech: "Node.js ESM, AWS Lambda"                               },
   { layer: "AI",        tech: "OpenAI GPT-4o mini"                                    },
   { layer: "Storage",   tech: "Amazon S3 — knowledge base & diploma uploads"          },
-  { layer: "Database",  tech: "Amazon DynamoDB — support tickets"                     },
+  { layer: "Database",  tech: "Amazon DynamoDB — support tickets & checklist"         },
   { layer: "OCR",       tech: "Amazon Textract — diploma text extraction"             },
   { layer: "API",       tech: "Amazon API Gateway (HTTP API)"                         },
+  { layer: "Email",     tech: "Brevo (nodemailer SMTP) — ticket confirmation & reply" },
 ];
 
 const UPOU_DOMAINS = [
@@ -85,6 +86,14 @@ const PROGRESS = [
       "README and architecture documentation written",
       "Stress-test questions prepared for demo video",
       "Textract bonus feature planned for diploma upload",
+      "Replaced AWS SES with Brevo transactional email",
+      "3 email triggers: ticket confirmation, admin-created, admin reply",
+      "TORUploader updated — JPG/PNG only, sample file link, privacy notice",
+      "Repeat detection added — gentle recap on 1st repeat, humor on 2nd+",
+      "Trapper logic refined — skips if bot already offered ticket",
+      "Decision matrix test suite — 15 test cases with token tracking",
+      "Repeat detection test suite — 7 test cases",
+      "System prompt expanded to 26 strict rules",
     ],
   },
 ];
@@ -194,7 +203,7 @@ export default function AboutPage() {
               An AI-powered helpdesk chatbot for UP Open University that answers questions about UPOU Degree Programs.
               It uses a RAG (Retrieval-Augmented Generation) pipeline — when a user asks a question, the system fetches
               relevant documents from S3 and sends them to OpenAI to generate an accurate, context-aware answer.
-              If the bot cannot answer, it automatically creates a support ticket in DynamoDB.
+              If the bot cannot answer, it automatically suggests opening a support ticket.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               {[
@@ -264,8 +273,9 @@ export default function AboutPage() {
                 { step: "2", label: "Merge Memory",         desc: "Combine last 6 messages with current question for context"       },
                 { step: "3", label: "Extract Keywords",     desc: "Remove stop words and identify faculty/level keywords"           },
                 { step: "4", label: "Fetch S3 Context",     desc: "Retrieve matching .md documents from S3 knowledge base"         },
-                { step: "5", label: "Generate Answer",      desc: "Send documents + question to OpenAI GPT-4o mini"                },
-                { step: "6", label: "Return / Auto-Ticket", desc: "Return answer — if unanswerable, suggest a support ticket"      },
+                { step: "5", label: "Generate Answer",      desc: "Send documents + question to OpenAI GPT-4o mini with 26 rules"  },
+                { step: "6", label: "Return / Suggest Ticket", desc: "Return answer — if unanswerable, suggest a support ticket"   },
+                { step: "7", label: "Email Notification",   desc: "Brevo sends confirmation, admin-created, or reply email to student" },
               ].map((s, i, arr) => (
                 <div key={i} className="flex items-start gap-3">
                   <div className="flex flex-col items-center">

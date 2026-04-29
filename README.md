@@ -42,7 +42,7 @@ cd backend
 npm install
 ```
 
-Create `backend/.env` using the template in the Environment Variables section below, then verify all connections:
+Create `lambda-backend/.env` using the template in the Environment Variables section below, then verify all connections:
 
 ```
 node local-client-conn-tester.mjs
@@ -116,7 +116,7 @@ User → EC2 (React Frontend)
 │   ├── vite.config.ts
 │   └── .env
 │
-└── backend/
+└── lambda-backend
     ├── index.mjs                         # Lambda handler + route dispatcher
     ├── src/
     │   ├── client/
@@ -162,7 +162,7 @@ User → EC2 (React Frontend)
 VITE_API_URL=/api
 ```
 
-### Backend — `backend/.env`
+### Backend — `lambda-backend.env`
 
 ```
 # AWS
@@ -378,14 +378,14 @@ Bot recommends:
 
 | Name | Role |
 |---|---|
-| Aquino, Jade | Backend, Lambda, AWS Integration |
-| Ayes, Mari Cris | Frontend, UI Components |
+| Aquino, Jade | Backend, Lambda, AWS Integration, Git Repo Supervision, |
+| Ayes, Mari Cris | Test Scenarios Creation, Lambda Functions  |
 | Adel, Deo Rico | Data Scraping, S3 Knowledge Base |
-| Bautista, Katrina Mae | S3 Setup, Data Preparation |
-| Evidor, Darvin | EC2, Deployment |
-| Hortaleza, Royce | Frontend, Chat UI |
-| Joaquin, John Rainer | EC2, Lambda Triggers |
-| Llenado, Daryljade | Backend, RAG Pipeline, Ticketing |
+| Bautista, Katrina Mae | S3 Setup, RAG Pipeline, Data Preparation, Progress Report,  |
+| Evidor, Darvin | SystemPrompts, Lambda Functions |
+| Hortaleza, Royce | Frontend, Chat UI, Admin UI, UI Components |
+| Joaquin, John Rainer | Testing Lambda Triggers |
+| Llenado, Daryljade | Frontend, UI Components, Ticketing, Prompt Engineering |
 | Molina, Yolanda | Documentation, Testing |
 
 ---
