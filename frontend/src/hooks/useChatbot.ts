@@ -11,6 +11,7 @@ import { Ticket } from "../types/ticket";
 
 interface ChatResponse {
   answer: string;
+  isRelevant?: boolean;
 }
 
 export const MENUS = {
@@ -64,7 +65,6 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
   // trapper flag — set to true when 3rd API call completes
   // actual message fires only after animation completes via onAnimationComplete
   const shouldShowTrapperRef = useRef(false);
-  const onAnimationCompleteRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const stored = loadConversations();
@@ -279,13 +279,6 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       return true;
     }
 
-    if (
-      lower.includes("open an it helpdesk ticket") ||
-      lower.includes("open an it ticket")
-    ) {
-      setTicketDialogOpen(true);
-      return true;
-    }
 
     if (lower === "continue chat") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
@@ -421,8 +414,13 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       const newCount = apiCallCount + 1;
       setApiCallCount(newCount);
 
-      if (newCount % 3 === 0) {
-        // Set flag — trapper fires AFTER animation completes
+      const isRelevant = data.isRelevant ?? true;
+
+      if (!isRelevant) {
+        // Bot couldn't answer — show trapper immediately after animation
+        shouldShowTrapperRef.current = true;
+      } else if (newCount % 3 === 0) {
+        // Every 3rd API call — show trapper after animation
         shouldShowTrapperRef.current = true;
       } else {
         setCurrentMenu([]);

@@ -166,7 +166,7 @@ VITE_API_URL=/api
 
 ```
 # AWS
-AWS_REGION=ap-southeast-1
+AWS_REGION=your-AWS-region  # all your AWS stuck should be in the same region for integration to work
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
 AWS_SESSION_TOKEN=your_session_token     # required for Learner Lab only (Not required in AWS personal account)
@@ -175,10 +175,10 @@ AWS_SESSION_TOKEN=your_session_token     # required for Learner Lab only (Not re
 S3_BUCKET_NAME=your-s3-bucket-name
 
 # DynamoDB
-DYNAMODB_TABLE_NAME=upou-helpdesk-tickets
+DYNAMODB_TABLE_NAME=upou-helpdesk-tickets # required for Learner Lab only (Not required in AWS personal account
 
 # OpenAI
-OPENAI_ENDPOINT=https://api.openai.com/v1/chat/completions
+OPENAI_ENDPOINT=your_openapi_endpoint #ex. https://is215-openai.upou.io/v1/chat/completions
 OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4o-mini
 ```
