@@ -20,7 +20,8 @@ An AI-powered helpdesk chatbot for UP Open University that answers questions abo
 ### 1. Clone the repository
 
 ```
-git clone https://github.com/your-username/your-repo.git
+git clone https://github.com/roycehorta/IS215_AI_Helpdesk_Assistant_Degree_Programs.git
+
 cd your-repo
 ```
 
@@ -168,7 +169,7 @@ VITE_API_URL=/api
 AWS_REGION=ap-southeast-1
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
-AWS_SESSION_TOKEN=your_session_token     # required for Learner Lab only
+AWS_SESSION_TOKEN=your_session_token     # required for Learner Lab only (Not required in AWS personal account)
 
 # S3
 S3_BUCKET_NAME=your-s3-bucket-name

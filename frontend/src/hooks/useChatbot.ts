@@ -24,8 +24,8 @@ export const MENUS = {
   ],
   LEVEL_1_FACULTY: [
     "Faculty of Education (FEd)",
-    "Information and Communication Studies (FICS)",
-    "Management and Development Studies (FMDS)",
+    "Faculty of Information and Communication Studies (FICS)",
+    "Faculty of Management and Development Studies (FMDS)",
   ],
   LEVEL_3_TRAPPER: [
     "Yes, back to Main Menu",
@@ -331,7 +331,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
           setMessages((prev) => [
             ...prev,
             {
-              text: "Please select a faculty:\n* [Faculty of Education (FEd)](#action)\n* [Information and Communication Studies (FICS)](#action)\n* [Management and Development Studies (FMDS)](#action)",
+              text: "Please select a faculty:\n* [Faculty of Education (FEd)](#action)\n* [Faculty of Information and Communication Studies (FICS)](#action)\n* [Faculty of Management and Development Studies (FMDS)](#action)",
               sender: "bot",
               timestamp: Date.now(),
             },

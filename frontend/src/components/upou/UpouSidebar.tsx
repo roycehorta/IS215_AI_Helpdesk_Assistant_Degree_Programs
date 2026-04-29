@@ -18,13 +18,22 @@ import { cn } from "@/lib/utils";
 import {
   BookOpen,
   CheckSquare,
+  ClipboardList,
   History,
   LayoutDashboard,
   MessageSquarePlus,
   MessagesSquare,
-  Trash2,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+
+// ── Add or remove nav items here only ─────────────────────────
+const NAV_ITEMS = [
+  { label: "AI Chat",     path: "/",          icon: MessagesSquare  },
+  { label: "Checklist",   path: "/checklist", icon: CheckSquare     },
+  { label: "Admin",       path: "/admin",     icon: LayoutDashboard },
+  { label: "About",       path: "/about",     icon: BookOpen        },
+  { label: "Update Log",  path: "/updates",   icon: ClipboardList   },
+];
 
 type Props = {
   conversations: Conversation[];
@@ -41,38 +50,41 @@ export function UpouSidebar({
   onSelect,
   onDelete,
 }: Props) {
-  const navigate = useNavigate(); // 
+  const navigate  = useNavigate();
+  const location  = useLocation();
   const { setOpenMobile, isMobile } = useSidebar();
+
+  const handleNav = (path: string) => {
+    navigate(path);
+    if (isMobile) setOpenMobile(false);
+  };
+
   return (
     <Sidebar collapsible="offcanvas">
       <SidebarHeader className="border-b border-sidebar-border/60">
         <div className="flex items-center gap-2 px-1 py-2">
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg  text-sidebar-primary-foreground">
-            <img
-              src="/up.png"
-              alt="UP Logo"
-              className="h-12 w-12 object-contain"
-            />
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg text-sidebar-primary-foreground">
+            <img src="/up.png" alt="UP Logo" className="h-12 w-12 object-contain" />
           </div>
           <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="text-sm font-bold text-sidebar-foreground">
-              UPOU Helpdesk
-            </span>
-            <span className="text-[11px] text-sidebar-foreground/70">
-              AI-Powered Support
-            </span>
+            <span className="text-sm font-bold text-sidebar-foreground">UPOU Helpdesk</span>
+            <span className="text-[11px] text-sidebar-foreground/70">AI-Powered Support</span>
           </div>
         </div>
+
+        {/* New Chat — expanded */}
         <div className="px-1 pb-2 group-data-[collapsible=icon]:hidden">
           <Button
             onClick={() => { onNewChat(); navigate("/"); }}
-            className="w-full justify-start gap-2  text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:cursor-pointer"
+            className="w-full justify-start gap-2 text-sidebar-primary-foreground hover:bg-sidebar-primary/90 hover:cursor-pointer"
             size="sm"
           >
             <MessageSquarePlus className="h-4 w-4" />
             New Chat
           </Button>
         </div>
+
+        {/* New Chat — collapsed icon only */}
         <div className="hidden px-1 pb-2 group-data-[collapsible=icon]:block">
           <Button
             onClick={onNewChat}
@@ -86,65 +98,30 @@ export function UpouSidebar({
       </SidebarHeader>
 
       <SidebarContent>
+        {/* ── Navigation ── */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/70">
             Navigation
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => { navigate("/"); if (isMobile) setOpenMobile(false); }}
-                  isActive={location.pathname === "/"}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
-                >
-                  <MessagesSquare className="h-4 w-4" />
-                  <span>AI Chat</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => { navigate("/checklist"); if (isMobile) setOpenMobile(false); }}
-                  isActive={location.pathname === "/checklist"}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
-                >
-                  <CheckSquare className="h-4 w-4" />
-                  <span>Checklist</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => { navigate("/admin"); if (isMobile) setOpenMobile(false); }}
-                  isActive={location.pathname === "/admin"}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span>Admin</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  onClick={() => { navigate("/about"); if (isMobile) setOpenMobile(false); }}
-                  isActive={location.pathname === "/about"}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
-                >
-                  <BookOpen className="h-4 w-4" />
-                  <span>About</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                {/* <SidebarMenuButton
-                  onClick={() => navigate('/admin')}
-                  className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
-                >
-                  <LayoutDashboard className="h-4 w-4" />
-                  <span>Admin Dashboard</span>
-                </SidebarMenuButton> */}
-              </SidebarMenuItem>
+              {NAV_ITEMS.map(({ label, path, icon: Icon }) => (
+                <SidebarMenuItem key={path}>
+                  <SidebarMenuButton
+                    onClick={() => handleNav(path)}
+                    isActive={location.pathname === path}
+                    className="data-[active=true]:bg-sidebar-accent data-[active=true]:text-sidebar-accent-foreground"
+                  >
+                    <Icon className="h-4 w-4" />
+                    <span>{label}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* ── Recent Chats ── */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-sidebar-foreground/70">
             <History className="mr-1 h-3 w-3" /> Recent Chats
@@ -170,14 +147,16 @@ export function UpouSidebar({
                     <span className="truncate">{c.title}</span>
                     <div
                       role="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(c.id);
-                      }}
+                      onClick={(e) => { e.stopPropagation(); onDelete(c.id); }}
                       className="ml-auto hidden rounded p-1 hover:bg-sidebar-primary/30 group-hover/item:inline-flex cursor-pointer"
                       aria-label="Delete chat"
                     >
-                      <Trash2 className="h-3 w-3" />
+                      <svg className="h-3 w-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6l-1 14H6L5 6" />
+                        <path d="M10 11v6M14 11v6" />
+                        <path d="M9 6V4h6v2" />
+                      </svg>
                     </div>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

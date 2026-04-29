@@ -9,7 +9,7 @@ import { useChatbot } from "./hooks/useChatbot";
 import AboutPage from "./pages/AboutPage";
 import AdminDashboard from "./pages/AdminDashboard";
 import ChatPage from "./pages/ChatPage";
-import ChecklistPage from "./pages/ChecklistPage";
+import UpdateLogPage from "./pages/UpdateLogsPage";
 import { Ticket } from "./types/ticket";
 
 const queryClient = new QueryClient();
@@ -50,23 +50,7 @@ const AppLayout = () => {
                         path="/"
                         element={<ChatPage chatState={chatState} />}
                       />
-                      <Route
-                        path="/checklist"
-                        element={
-                          <div className="h-screen flex flex-col overflow-hidden">
-                            {/* Mobile header */}
-                            <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100 bg-white md:hidden shrink-0">
-                              <SidebarTrigger />
-                              <span className="text-sm font-semibold text-gray-800">
-                                Checklist
-                              </span>
-                            </div>
-                            <div className="flex-1 overflow-y-auto">
-                              <ChecklistPage />
-                            </div>
-                          </div>
-                        }
-                      />
+
                       <Route
                         path="/about"
                         element={
@@ -84,11 +68,28 @@ const AppLayout = () => {
                           </div>
                         }
                       />
+                      <Route path="/updates" element={<UpdateLogPage />} />
                       <Route
                         path="*"
                         element={
-                          <div className="text-center mt-20 text-gray-500">
-                            Page Not Found
+                          <div className="flex flex-col items-center justify-center h-full text-center px-6">
+                            <div className="text-8xl mb-4">🎓</div>
+                            <h1 className="text-6xl font-bold text-primary mb-2">
+                              404
+                            </h1>
+                            <h2 className="text-xl font-semibold text-gray-700 mb-2">
+                              Page Not Found
+                            </h2>
+                            <p className="text-gray-500 text-sm max-w-xs mb-6">
+                              Looks like this page took an online course and
+                              never came back. Even UPOU couldn't find it.
+                            </p>
+                            <button
+                              onClick={() => (window.location.href = "/")}
+                              className="px-5 py-2 rounded-full bg-primary text-white text-sm font-medium hover:bg-primary/90 transition"
+                            >
+                              Back to AI Chat
+                            </button>
                           </div>
                         }
                       />
