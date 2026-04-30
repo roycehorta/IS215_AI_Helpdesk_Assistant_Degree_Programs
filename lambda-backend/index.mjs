@@ -9,6 +9,14 @@ import { mergeMemory } from "./src/service/MergeMemoryService.mjs";
 import { saveChecklist } from "./src/service/SaveChecklistService.mjs";
 import { sendReply } from "./src/service/SendReplyService.mjs";
 
+// ── Shared CORS headers ───────────────────────────────────────────────────────
+const CORS = {
+  "Content-Type": "application/json",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type,Authorization",
+  "Access-Control-Allow-Methods": "POST,OPTIONS,GET",
+};
+
 export const handler = async (event) => {
   // CORS preflight
   if (
@@ -17,6 +25,7 @@ export const handler = async (event) => {
   ) {
     return { statusCode: 200, headers: CORS, body: "" };
   }
+
   // Parse body first
   const body = JSON.parse(event.body || "{}");
   console.log("Incoming _route:", body._route);
@@ -44,6 +53,7 @@ export const handler = async (event) => {
       };
     }
   }
+}
 
   if (body._route === "get-tickets") {
     try {
@@ -109,3 +119,35 @@ export const handler = async (event) => {
       };
     }
   }
+  // ── Chat route ──────────────────────────────────────
+  try {
+    const { userQuestion, chatHistory } = await getUserQuestion(event);
+    console.log("User Question:", userQuestion);
+
+    const searchTarget = await mergeMemory(userQuestion, chatHistory);
+    const keywords = await extractKeywords(searchTarget);
+    const s3Context = await fetchS3Context(keywords);
+    const result = await generateAnswer(userQuestion, chatHistory, s3Context);
+
+    return {
+      statusCode: 200,
+      headers: CORS,
+      body: JSON.stringify({
+        answer: result.answer,
+        isRelevant: result.isRelevant,
+        tokensUsed: result.tokensUsed,
+        model: result.model,
+      }),
+    };
+  } catch (error) {
+    console.error("Handler Error:", error.message);
+    return {
+      statusCode: 500,
+      headers: CORS,
+      body: JSON.stringify({
+        answer: "Sorry, something went wrong. Please try again.",
+        error: error.message,
+      }),
+    };
+  }
+}
