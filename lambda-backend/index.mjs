@@ -119,6 +119,48 @@ export const handler = async (event) => {
       };
     }
   }
+
+  // ── Send reply ───────────────────────────────────────────
+  if (body._route === "send-reply") {
+    try {
+      const result = await sendReply(
+        body.toEmail,
+        body.ticketId,
+        body.replyText,
+        body.studentName,
+      );
+      return { statusCode: 200, headers: CORS, body: JSON.stringify(result) };
+    } catch (error) {
+      console.error("Send Reply Route Error:", error.message);
+      return {
+        statusCode: 500,
+        headers: CORS,
+        body: JSON.stringify({ error: "Failed to send reply." }),
+      };
+    }
+  }
+
+  // ── Analyze TOR / Diploma via Textract ──────────────────
+  if (body._route === "analyze-tor") {
+    try {
+      const { analyzeDocument } =
+        await import("./src/service/AnalyzeDocumentService.mjs");
+      const result = await analyzeDocument(
+        body.fileBase64,
+        body.fileType,
+        body.fileName,
+      );
+      return { statusCode: 200, headers: CORS, body: JSON.stringify(result) };
+    } catch (error) {
+      console.error("Analyze TOR Route Error:", error.message);
+      return {
+        statusCode: 500,
+        headers: CORS,
+        body: JSON.stringify({ error: "Failed to analyze document." }),
+      };
+    }
+  }
+
   // ── Chat route ──────────────────────────────────────
   try {
     const { userQuestion, chatHistory } = await getUserQuestion(event);
