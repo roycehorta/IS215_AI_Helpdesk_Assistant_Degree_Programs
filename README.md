@@ -381,7 +381,7 @@ The system prompt in `GenerateAnswerService.mjs` contains **19 strict rules** th
 
 ### Ticketing System (DynamoDB + SES)
 
-Users can submit a support ticket directly from the chat interface via the **Convert to Ticket** button. The ticket description is pre-filled with the user's last question. The full chat transcript is automatically attached.
+Users can submit a support ticket directly from the chat interface via the **Submit Ticket** button. The ticket description is pre-filled with the user's last question. The full chat transcript is automatically attached. User needs to fill out all neccessary information.
 
 **Ticket fields saved to DynamoDB:**
 
@@ -482,10 +482,9 @@ This is an academic group project for IS 215. All contributions are made by enro
 
 **Workflow:**
 1. Branch off from `dev` (not `main` directly)
-2. Open a pull request into `dev` and tag at least one other group member for review
-3. Merge once approved
-4. `dev` is merged into `main` for stable releases only
-5. Do not push `.env` files or AWS credentials under any circumstance
+2. Open a pull request into `dev` and one member manages merging/pull request
+3. `dev` is merged into `main` for stable final releases only
+4. Do not push `.env` files or AWS credentials under any circumstance
 
 ---
 
@@ -493,15 +492,15 @@ This is an academic group project for IS 215. All contributions are made by enro
 
 | Name | Role | GitHub |
 |---|---|---|
-| Aquino, Jade | Backend, Lambda, AWS Integration | [@jaqquin](https://github.com/jaqquin) |
-| Ayes, Mari Cris | Frontend, UI Components | [@crisayes](https://github.com/crisayes) |
-| Adel, Deo Rico | Data Scraping, S3 Knowledge Base | [@deyorico](https://github.com/deyorico) |
-| Bautista, Katrina Mae | S3 Setup, Data Preparation | [@katrinamaebautista](https://github.com/katrinamaebautista) |
-| Evidor, Darvin | EC2, Deployment | [@dmevidor](https://github.com/dmevidor) |
+| Aquino, Jade | Backend, Lambda, Git Branch Management | [@jaqquin](https://github.com/jaqquin) |
+| Ayes, Mari Cris | Backend, Lambda, AWS Integration | [@crisayes](https://github.com/crisayes) |
+| Adel, Deo Rico | Backend, Data Scraping, S3 Knowledge Base | [@deyorico](https://github.com/deyorico) |
+| Bautista, Katrina Mae | Backend, S3 Setup, Data Preparation | [@katrinamaebautista](https://github.com/katrinamaebautista) |
+| Evidor, Darvin | Backend, Lamda, AWS Integration | [@dmevidor](https://github.com/dmevidor) |
 | Hortaleza, Royce | Frontend, Chat UI | [@roycehorta](https://github.com/roycehorta) |
-| Joaquin, John Rainer | EC2, Lambda Triggers | [@jmjoaquin1](https://github.com/jmjoaquin1) |
-| Llenado, Daryljade | Backend, RAG Pipeline, Ticketing | [@jedlovescpe2](https://github.com/jedlovescpe2) |
-| Molina, Yolanda | Documentation, Testing | [@yemolina](https://github.com/yemolina) |
+| Joaquin, John Rainer | Backend, Lambda Triggers | [@jmjoaquin1](https://github.com/jmjoaquin1) |
+| Llenado, Daryljade | Backend, Frontend, Ticketing | [@jedlovescpe2](https://github.com/jedlovescpe2) |
+| Molina, Yolanda | Backend, Documentation | [@yemolina](https://github.com/yemolina) |
 
 ---
 
