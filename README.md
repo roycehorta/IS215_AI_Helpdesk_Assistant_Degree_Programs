@@ -444,7 +444,7 @@ This produces a `frontend/dist/` folder containing the static site.
 #### 6c. Transfer the build to EC2
 
 ```
-scp -i your-key.pem -r frontend/dist/ ec2-user@<your-ec2-ip>:/home/ec2-user/upou-helpdesk/
+scp -i your-key.pem -r frontend/dist/ ec2-user@project.kabautista4.is215.upou.io>:/home/ec2-user/upou-helpdesk/
 ```
 
 #### 6d. Install and configure Nginx on EC2
@@ -452,7 +452,7 @@ scp -i your-key.pem -r frontend/dist/ ec2-user@<your-ec2-ip>:/home/ec2-user/upou
 SSH into your EC2 instance:
 
 ```
-ssh -i your-key.pem ec2-user@<your-ec2-ip>
+ssh -i your-key.pem ec2-user@project.kabautista4.is215.upou.io
 ```
 
 Install Nginx and copy the build:
@@ -492,7 +492,7 @@ In the AWS Console, go to **EC2 → Security Groups → your instance's security
 
 - **Type:** HTTP — **Port:** 80 — **Source:** `0.0.0.0/0`
 
-The app will be accessible at `http://<your-ec2-public-ip>`.
+The app will be accessible at `https://project.kabautista4.is215.upou.io`.
 
 ---
 
