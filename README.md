@@ -443,7 +443,7 @@ This produces a `frontend/dist/` folder containing the static site.
 #### 6c. Transfer the build to EC2
 
 ```
-scp -i your-key.pem -r frontend/dist/ ec2-user@project.kabautista4.is215.upou.io>:/home/ec2-user/upou-helpdesk/
+scp -i your-key.pem -r frontend/dist/ ec2-user@<EC2-PUBLIC-IP>:/home/ec2-user/upou-helpdesk/
 ```
 
 #### 6d. Install and configure Nginx on EC2
@@ -451,7 +451,7 @@ scp -i your-key.pem -r frontend/dist/ ec2-user@project.kabautista4.is215.upou.io
 SSH into your EC2 instance:
 
 ```
-ssh -i your-key.pem ec2-user@project.kabautista4.is215.upou.io
+ssh -i your-key.pem ec2-user@<EC2-PUBLIC-IP>
 ```
 
 Install Nginx and copy the build:
