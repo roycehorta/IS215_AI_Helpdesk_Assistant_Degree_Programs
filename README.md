@@ -30,7 +30,7 @@ An AI-powered helpdesk chatbot for UP Open University that answers questions abo
 **Key Features at a Glance:**
 - RAG pipeline grounded in official UPOU S3 knowledge base documents
 - Intelligent S3 routing by faculty and academic level
-- 18-rule system prompt to prevent hallucination and prompt injection
+- 19-rule system prompt to prevent hallucination and prompt injection
 - Support ticket system with admin dashboard (DynamoDB + SES)
 - TOR/Diploma upload for personalized program recommendations (Textract)
 - Conversation memory, typing animation, and persistent chat history
@@ -100,13 +100,27 @@ User → EC2 (React Frontend)
 ```
 
 **RAG Pipeline per user question:**
-1. Extract user question + chat history from request
-2. Merge memory — last 6 messages cleaned of markdown noise for context
-3. Extract keywords — stop words removed, faculty and level detected
-4. Fetch matching `.md` documents from S3 via intelligent prefix routing
-5. Send documents + question to OpenAI GPT-4o mini with 18 strict rules
-6. Return structured JSON answer with `isRelevant` flag
-7. If bot cannot answer — suggest support ticket via `[Open a Support Ticket](#action)` link
+1. Extract user question + chat history from request (`GetUserQuestionService`)
+2. Merge memory — last 6 messages cleaned of markdown noise for context (`MergeMemoryService`)
+3. Extract keywords — stop words removed, faculty and level detected (`ExtractKeywordsService`)
+4. Determine S3 prefixes — detect faculty (supports multiple) and level from keywords (`DetermineKeysToFetchService`)
+5. Fetch matching `.md` document keys from S3 via intelligent prefix routing (`FetchS3Context`)
+6. Build context — fetch document contents from S3 and assemble into prompt (`BuildContextService`)
+7. Send context + question to OpenAI GPT-4o mini with 19 strict rules (`GenerateAnswerService`)
+8. Return structured JSON answer with `isRelevant` flag
+9. If bot cannot answer — suggest support ticket via `[Open a Support Ticket](#action)` link
+
+**Lambda Route Dispatch (`_route` body parameter):**
+
+| `_route` value | Handler | Description |
+|---|---|---|
+| `ticket` | `generateTicket` | Create a new support ticket in DynamoDB |
+| `get-tickets` | `getTickets` | Fetch all tickets for admin dashboard |
+| `save-checklist` | `saveChecklist` | Save a checklist item status |
+| `get-checklist` | `getChecklist` | Fetch full checklist from DynamoDB |
+| `send-reply` | `sendReply` | Send SES email reply to student |
+| `analyze-tor` | `analyzeDocument` | Run Textract on uploaded TOR/diploma |
+| *(default)* | Chat pipeline | Full RAG pipeline for user questions |
 
 ---
 
@@ -151,19 +165,23 @@ User → EC2 (React Frontend)
     │   │   ├── S3BucketClient.mjs        # AWS S3 client
     │   │   ├── DynamoDBClient.mjs        # AWS DynamoDB client
     │   │   ├── TextractClient.mjs        # AWS Textract client
+    │   │   ├── SESClient.mjs             # AWS SES client
     │   │   └── OpenAIClient.mjs          # OpenAI HTTP client
     │   └── service/
-    │       ├── GetUserQuestionService.mjs     # Extracts question + history
-    │       ├── MergeMemoryService.mjs         # Merges last 6 messages
-    │       ├── ExtractKeywordsService.mjs     # Stop word removal + keywords
-    │       ├── FetchS3Context.mjs             # S3 prefix routing + fetching
-    │       ├── GenerateAnswerService.mjs      # OpenAI call + system prompt
-    │       ├── GenerateTicketService.mjs      # Atomic DynamoDB ticket creation
-    │       ├── GetTicketsService.mjs          # Fetch all tickets from DynamoDB
-    │       ├── SendReplyService.mjs           # SES email reply to student
-    │       ├── SaveChecklistService.mjs       # Save checklist item to DynamoDB
-    │       ├── GetChecklistService.mjs        # Fetch checklist from DynamoDB
-    │       └── AnalyzeDocumentService.mjs     # Textract TOR/diploma analysis
+    │       ├── GetUserQuestionService.mjs       # Extracts question + history
+    │       ├── MergeMemoryService.mjs           # Merges last 6 messages
+    │       ├── ExtractKeywordsService.mjs       # Stop word removal + keywords
+    │       ├── DetermineKeysToFetchService.mjs  # S3 prefix routing logic (faculty + level detection)
+    │       ├── FetchS3Context.mjs               # Lists + fetches S3 document content
+    │       ├── BuildContextService.mjs          # Assembles full OpenAI context from S3 docs
+    │       ├── GenerateAnswerService.mjs         # OpenAI call + 19-rule system prompt
+    │       ├── GenerateTicketService.mjs         # Atomic DynamoDB ticket creation
+    │       ├── GetTicketsService.mjs             # Fetch all tickets from DynamoDB
+    │       ├── SendReplyService.mjs              # SES email reply to student
+    │       ├── SaveChecklistService.mjs          # Save checklist item to DynamoDB
+    │       ├── GetChecklistService.mjs           # Fetch checklist from DynamoDB
+    │       ├── SuccessResponseService.mjs        # Shared success response helper
+    │       └── AnalyzeDocumentService.mjs        # Textract TOR/diploma analysis
     ├── test-s3-routing.mjs               # S3 routing unit tests (8 cases)
     ├── test-seed-tickets.mjs             # Seed 40 sample tickets to DynamoDB
     ├── test-textract.mjs                 # Textract integration test
@@ -255,15 +273,15 @@ Each `.md` file describes one UPOU program including program name, faculty, desc
 
 **S3 Routing Logic:**
 
-The `FetchS3Context.mjs` service uses intelligent prefix routing:
+The routing logic is split across `DetermineKeysToFetchService.mjs` (prefix building) and `FetchS3Context.mjs` (key listing + document fetching). Multiple faculties can now be detected simultaneously from a single query.
 
 | Detected | Result |
 |---|---|
-| Faculty + Level | Fetch `faculty/level/` folder |
+| Multiple faculties + Level | Fetch `faculty/level/` folder for each detected faculty in parallel |
+| Single faculty + Level | Fetch `faculty/level/` folder |
+| Faculties only (broad) | Fetch all levels under each detected faculty |
 | Level only | Fetch `all faculties/level/` folders |
-| Faculty only (broad) | Fetch faculty overview `.md` file |
-| No faculty, no level (broad) | Fetch all 3 faculty overview files |
-| Nothing detected | Fallback to all 3 faculty overview files |
+| No faculty, no level | Fallback — fetch entire `s3-knowledgebase/` |
 
 ### DynamoDB Table
 
@@ -333,7 +351,7 @@ Copy the `dist/` folder to your EC2 instance and serve it via Nginx or Apache. U
 
 ## Prompt Engineering
 
-The system prompt in `GenerateAnswerService.mjs` contains **18 strict rules** that govern bot behavior:
+The system prompt in `GenerateAnswerService.mjs` contains **19 strict rules** that govern bot behavior:
 
 | Rule | Description |
 |---|---|
@@ -355,6 +373,7 @@ The system prompt in `GenerateAnswerService.mjs` contains **18 strict rules** th
 | 16 | Do not repeat answers — suggest ticket instead |
 | 17 | Be transparent when knowledge base is incomplete |
 | 18 | Respond warmly to greetings, set isRelevant=true |
+| 19 | Never mix program levels in a single response |
 
 ---
 
