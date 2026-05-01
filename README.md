@@ -316,36 +316,196 @@ All of these are available by default under the Learner Lab `LabRole`.
 
 ## Deployment
 
-### 1. Package the Lambda function
+Follow these steps in order. Complete AWS Setup (S3, DynamoDB, SES, IAM) before deploying Lambda or the frontend.
+
+**Deployment order:**
+1. [AWS Setup](#aws-setup) — S3, DynamoDB, SES, IAM (do this first)
+2. [Step 1 — Package Lambda](#step-1--package-the-lambda-function)
+3. [Step 2 — Create Lambda function](#step-2--create-the-lambda-function)
+4. [Step 3 — Set environment variables](#step-3--set-lambda-environment-variables)
+5. [Step 4 — Create API Gateway](#step-4--create-and-configure-api-gateway)
+6. [Step 5 — Seed DynamoDB](#step-5--seed-dynamodb)
+7. [Step 6 — Build and deploy frontend to EC2](#step-6--build-and-deploy-frontend-to-ec2)
+
+---
+
+### Step 1 — Package the Lambda function
+
+From the `backend/` directory, install dependencies and zip everything except secrets and cache:
 
 ```
 cd backend
+npm install
 zip -r function.zip . --exclude "*.env" "logs/*" "node_modules/.cache/*"
 ```
 
-### 2. Upload to AWS Lambda
+This produces `backend/function.zip`. Keep this file — you will upload it in the next step.
 
-- Runtime: Node.js 18.x
-- Handler: `index.handler`
-- Timeout: 30 seconds (recommended, OpenAI calls can be slow)
-- Memory: 256 MB minimum
-- Set all environment variables from `backend/.env` in the Lambda configuration
+---
 
-### 3. Configure API Gateway
+### Step 2 — Create the Lambda function
 
-- Create an HTTP API in API Gateway
-- Add a `POST /api/chat` route pointing to your Lambda function
-- Add a `GET /api/tickets` and `POST /api/tickets` route for the ticketing system
-- Enable CORS for your EC2 frontend origin
+1. Go to **AWS Console → Lambda → Create function**
+2. Select **Author from scratch**
+3. Set the following:
+   - **Function name:** `upou-helpdesk`
+   - **Runtime:** Node.js 18.x
+   - **Architecture:** x86_64
+   - **Execution role:** Use existing role → select `LabRole` (Learner Lab) or your IAM role
+4. Click **Create function**
+5. On the function page, go to **Code → Upload from → .zip file**
+6. Upload `backend/function.zip`
+7. After upload, go to **Configuration → General configuration → Edit** and set:
+   - **Handler:** `index.handler`
+   - **Timeout:** 30 seconds
+   - **Memory:** 256 MB
 
-### 4. Deploy the frontend to EC2
+---
+
+### Step 3 — Set Lambda environment variables
+
+Go to **Configuration → Environment variables → Edit** and add each of the following:
+
+| Key | Value |
+|---|---|
+| `AWS_REGION` | `ap-southeast-1` |
+| `AWS_ACCESS_KEY_ID` | Your access key |
+| `AWS_SECRET_ACCESS_KEY` | Your secret key |
+| `AWS_SESSION_TOKEN` | Your session token *(Learner Lab only — rotate every 4 hours)* |
+| `S3_BUCKET_NAME` | Your S3 bucket name |
+| `DYNAMODB_TABLE_NAME` | `upou-helpdesk-tickets` |
+| `OPENAI_ENDPOINT` | `https://is215-openai.upou.io/v1/chat/completions` |
+| `OPENAI_API_KEY` | Your class API key from MyPortal |
+| `OPENAI_MODEL` | `gpt-4o-mini` |
+
+Click **Save**. Verify the function deploys without errors by checking the **Test** tab with a simple `{}` payload.
+
+> **Learner Lab reminder:** Every time you start a new lab session, your `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` rotate. You must update these three values in the Lambda environment variables each session.
+
+---
+
+### Step 4 — Create and configure API Gateway
+
+All frontend requests are routed through a **single Lambda function** using the `_route` field in the request body. You only need one API Gateway route for all chat and ticket operations.
+
+1. Go to **AWS Console → API Gateway → Create API**
+2. Choose **HTTP API → Build**
+3. Under **Integrations**, click **Add integration**:
+   - Integration type: Lambda
+   - Lambda function: select `upou-helpdesk`
+4. Under **Configure routes**, add:
+   - **Method:** `POST` — **Path:** `/api`
+5. Click **Next → Next → Create**
+6. After creation, go to **CORS** under your API settings and configure:
+   - **Allow origins:** `*` (or your EC2 domain once known)
+   - **Allow methods:** `POST, OPTIONS`
+   - **Allow headers:** `Content-Type, Authorization`
+7. Note your **Invoke URL** — it will look like:
+   ```
+   https://xxxxxxxxxx.execute-api.ap-southeast-1.amazonaws.com
+   ```
+   You will use this in the frontend `.env` in Step 6.
+
+---
+
+### Step 5 — Seed DynamoDB
+
+Before the ticketing system can generate ticket IDs, the DynamoDB counter row must be initialized. Run this once from your local machine with valid AWS credentials in `backend/.env`:
+
+```
+cd backend
+node test-seed-tickets.mjs
+```
+
+This creates the `__COUNTER__` row and seeds 40 sample tickets. Confirm in the AWS Console under **DynamoDB → Tables → upou-helpdesk-tickets → Explore items** that records appear.
+
+---
+
+### Step 6 — Build and deploy frontend to EC2
+
+#### 6a. Set the API URL
+
+Edit `frontend/.env` and point it at your API Gateway invoke URL from Step 4:
+
+```
+VITE_API_URL=https://xxxxxxxxxx.execute-api.ap-southeast-1.amazonaws.com/api
+```
+
+#### 6b. Build the frontend
 
 ```
 cd frontend
+npm install
 npm run build
 ```
 
-Copy the `dist/` folder to your EC2 instance and serve it via Nginx or Apache. Update `VITE_API_URL` in `frontend/.env` to point to your API Gateway URL before building.
+This produces a `frontend/dist/` folder containing the static site.
+
+#### 6c. Transfer the build to EC2
+
+```
+scp -i your-key.pem -r frontend/dist/ ec2-user@<your-ec2-ip>:/home/ec2-user/upou-helpdesk/
+```
+
+#### 6d. Install and configure Nginx on EC2
+
+SSH into your EC2 instance:
+
+```
+ssh -i your-key.pem ec2-user@<your-ec2-ip>
+```
+
+Install Nginx and copy the build:
+
+```
+sudo yum install nginx -y           # Amazon Linux
+sudo mkdir -p /usr/share/nginx/html
+sudo cp -r /home/ec2-user/upou-helpdesk/dist/* /usr/share/nginx/html/
+```
+
+Create an Nginx config at `/etc/nginx/conf.d/upou.conf`:
+
+```nginx
+server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+Start Nginx:
+
+```
+sudo systemctl enable nginx
+sudo systemctl start nginx
+```
+
+#### 6e. Open EC2 port 80
+
+In the AWS Console, go to **EC2 → Security Groups → your instance's security group → Inbound rules → Edit** and add:
+
+- **Type:** HTTP — **Port:** 80 — **Source:** `0.0.0.0/0`
+
+The app will be accessible at `http://<your-ec2-public-ip>`.
+
+---
+
+### Verifying the deployment
+
+Once all steps are complete, open the frontend in your browser and confirm:
+
+- [ ] The chat interface loads and the bot responds to a greeting
+- [ ] A question about a UPOU program returns a relevant answer
+- [ ] The **Upload TOR / Diploma** button accepts a file and returns recommendations
+- [ ] Submitting a support ticket creates a record (check DynamoDB)
+- [ ] The admin dashboard at `/admin` loads and displays tickets
+- [ ] Replying to a ticket from the admin panel sends an email (check SES logs)
 
 ---
 
