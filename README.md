@@ -269,6 +269,8 @@ s3-knowledgebase/
     └── graduate-certificate/
 ```
 
+To upload, go to **AWS Console → S3 → your bucket → Upload → Add folder**, select the `s3-knowledgebase/` folder from the cloned repo, and click **Upload**.
+
 Each `.md` file describes one UPOU program including program name, faculty, description, admission requirements, and curriculum. Faculty overview `.md` files at the root of each faculty folder are used for broad queries.
 
 **S3 Routing Logic:**
