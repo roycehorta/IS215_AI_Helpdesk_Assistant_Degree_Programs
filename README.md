@@ -495,10 +495,10 @@ This is an academic group project for IS 215. All contributions are made by enro
 | Aquino, Jade | Backend, Lambda, Git Branch Management | [@jaqquin](https://github.com/jaqquin) |
 | Ayes, Mari Cris | Backend, Lambda, AWS Integration | [@crisayes](https://github.com/crisayes) |
 | Adel, Deo Rico | Backend, Data Scraping, S3 Knowledge Base | [@deyorico](https://github.com/deyorico) |
-| Bautista, Katrina Mae | Backend, S3 Setup, Data Preparation | [@katrinamaebautista](https://github.com/katrinamaebautista) |
+| Bautista, Katrina Mae | Backend, Data Scraping, S3 Knowledge Base | [@katrinamaebautista](https://github.com/katrinamaebautista) |
 | Evidor, Darvin | Backend, Lamda, AWS Integration | [@dmevidor](https://github.com/dmevidor) |
 | Hortaleza, Royce | Frontend, Chat UI | [@roycehorta](https://github.com/roycehorta) |
-| Joaquin, John Rainer | Backend, Lambda Triggers | [@jmjoaquin1](https://github.com/jmjoaquin1) |
+| Joaquin, John Rainer | Backend, Lambda, AWS Integration | [@jmjoaquin1](https://github.com/jmjoaquin1) |
 | Llenado, Daryljade | Backend, Frontend, Ticketing | [@jedlovescpe2](https://github.com/jedlovescpe2) |
 | Molina, Yolanda | Backend, Documentation | [@yemolina](https://github.com/yemolina) |
 
