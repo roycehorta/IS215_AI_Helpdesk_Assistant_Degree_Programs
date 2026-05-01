@@ -6,20 +6,19 @@ IS 215 Project | 2nd Semester SY 2025-2026
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Quick Start](#quick-start)
-3. [System Architecture](#system-architecture)
-4. [Project Structure](#project-structure)
-5. [Prerequisites](#prerequisites)
-6. [Environment Variables](#environment-variables)
-7. [AWS Setup](#aws-setup)
-8. [Deployment](#deployment)
-9. [Prompt Engineering](#prompt-engineering)
-10. [Bonus Features](#bonus-features)
-11. [Known Limitations](#known-limitations)
-12. [Tech Stack](#tech-stack)
-13. [Contributing](#contributing)
-14. [Group Members](#group-members)
-15. [License](#license)
+2. [System Architecture](#system-architecture)
+3. [Project Structure](#project-structure)
+4. [Prerequisites](#prerequisites)
+5. [Environment Variables](#environment-variables)
+6. [AWS Setup](#aws-setup)
+7. [Deployment](#deployment)
+8. [Prompt Engineering](#prompt-engineering)
+9. [Bonus Features](#bonus-features)
+10. [Known Limitations](#known-limitations)
+11. [Tech Stack](#tech-stack)
+12. [Contributing](#contributing)
+13. [Group Members](#group-members)
+14. [License](#license)
 
 ---
 
@@ -40,48 +39,6 @@ An AI-powered helpdesk chatbot for UP Open University that answers questions abo
 - Current students with questions about their program
 - General public inquiring about UPOU academic offerings
 - UPOU helpdesk staff managing support tickets via the admin dashboard
-
----
-
-## Quick Start
-
-### 1. Clone the repository
-
-```
-git clone https://github.com/roycehorta/IS215_AI_Helpdesk_Assistant_Degree_Programs.git
-cd IS215_AI_Helpdesk_Assistant_Degree_Programs
-```
-
-### 2. Frontend
-
-```
-cd frontend
-npm install
-npm run dev
-```
-
-Open http://localhost:5173
-
-### 3. Backend (local testing only)
-
-```
-cd backend
-npm install
-```
-
-Create `backend/.env` using the template in the [Environment Variables](#environment-variables) section below, then verify all connections:
-
-```
-node local-client-conn-tester.mjs
-```
-
-Run the full AI response pipeline test:
-
-```
-node local-tester.mjs
-```
-
-> **Note:** Local testing uses direct Lambda invocation. For full end-to-end testing including API Gateway, see the [Deployment](#deployment) section.
 
 ---
 
