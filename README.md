@@ -31,7 +31,7 @@ An AI-powered helpdesk chatbot for UP Open University that answers questions abo
 - RAG pipeline grounded in official UPOU S3 knowledge base documents
 - Intelligent S3 routing by faculty and academic level
 - 19-rule system prompt to prevent hallucination and prompt injection
-- Support ticket system with admin dashboard (DynamoDB + SES)
+- Support ticket system with admin dashboard (DynamoDB + Brevo)
 - TOR/Diploma upload for personalized program recommendations (Textract)
 - Conversation memory, typing animation, and persistent chat history
 
@@ -94,7 +94,7 @@ User → EC2 (React Frontend)
           ↓
    Lambda Function (Node.js)
      ↓         ↓         ↓        ↓         ↓
-   S3        OpenAI    DynamoDB  Textract   SES
+   S3        OpenAI    DynamoDB  Textract   Brevo
 (Knowledge  (GPT-4o   (Tickets)  (OCR)    (Email
   Base)      mini)                        Replies)
 ```
@@ -319,7 +319,7 @@ All of these are available by default under the Learner Lab `LabRole`.
 Follow these steps in order. Complete AWS Setup (S3, DynamoDB, SES, IAM) before deploying Lambda or the frontend.
 
 **Deployment order:**
-1. [AWS Setup](#aws-setup) — S3, DynamoDB, SES, IAM (do this first)
+1. [AWS Setup](#aws-setup) — S3, DynamoDB, IAM (do this first)
 2. [Step 1 — Package Lambda](#step-1--package-the-lambda-function)
 3. [Step 2 — Create Lambda function](#step-2--create-the-lambda-function)
 4. [Step 3 — Set environment variables](#step-3--set-lambda-environment-variables)
@@ -371,7 +371,6 @@ Go to **Configuration → Environment variables → Edit** and add each of the f
 | `AWS_REGION` | `ap-southeast-1` |
 | `AWS_ACCESS_KEY_ID` | Your access key |
 | `AWS_SECRET_ACCESS_KEY` | Your secret key |
-| `AWS_SESSION_TOKEN` | Your session token *(Learner Lab only — rotate every 4 hours)* |
 | `S3_BUCKET_NAME` | Your S3 bucket name |
 | `DYNAMODB_TABLE_NAME` | `upou-helpdesk-tickets` |
 | `OPENAI_ENDPOINT` | `https://is215-openai.upou.io/v1/chat/completions` |
@@ -380,7 +379,7 @@ Go to **Configuration → Environment variables → Edit** and add each of the f
 
 Click **Save**. Verify the function deploys without errors by checking the **Test** tab with a simple `{}` payload.
 
-> **Learner Lab reminder:** Every time you start a new lab session, your `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, and `AWS_SESSION_TOKEN` rotate. You must update these three values in the Lambda environment variables each session.
+> **Learner Lab reminder:** Every time you start a new lab session, your `AWS_ACCESS_KEY_ID`, and `AWS_SECRET_ACCESS_KEY` rotate. You must update these three values in the Lambda environment variables each session.
 
 ---
 
@@ -505,7 +504,7 @@ Once all steps are complete, open the frontend in your browser and confirm:
 - [ ] The **Upload TOR / Diploma** button accepts a file and returns recommendations
 - [ ] Submitting a support ticket creates a record (check DynamoDB)
 - [ ] The admin dashboard at `/admin` loads and displays tickets
-- [ ] Replying to a ticket from the admin panel sends an email (check SES logs)
+- [ ] Replying to a ticket from the admin panel sends an email (check Brevo logs)
 
 ---
 
@@ -539,7 +538,7 @@ The system prompt in `GenerateAnswerService.mjs` contains **19 strict rules** th
 
 ## Bonus Features
 
-### Ticketing System (DynamoDB + SES)
+### Ticketing System (DynamoDB + Brevo)
 
 Users can submit a support ticket directly from the chat interface via the **Submit Ticket** button. The ticket description is pre-filled with the user's last question. The full chat transcript is automatically attached. User needs to fill out all neccessary information.
 
@@ -603,8 +602,7 @@ Bot recommends:
 | Ticket ID capacity | The atomic counter supports `TX-A001` to `TX-Z999` — a maximum of **26,000 tickets**. Beyond this the counter must be manually reset or the format extended. |
 | Daily API usage limit | The class OpenAI endpoint has an undisclosed daily usage cap per API key. Exceeding it returns an over-limit message for the rest of the day. |
 | Textract file size | TOR/diploma uploads are capped at **5MB**. Files larger than this will be rejected at the Lambda layer. |
-| SES sandbox mode | In sandbox mode, both sender and recipient emails must be verified in SES. Request production access to lift this restriction. |
-| AWS Learner Lab session tokens | Credentials expire approximately every 4 hours. Lambda environment variables must be updated manually each session. |
+| AWS Learner Lab session tokens | Credentials are auto-injected via the LabRole — no manual rotation needed for Lambda. Local `.env` credentials still need to be refreshed each session for local testing. |
 | Context memory | Only the last 6 messages are merged for context. Very long conversations may lose early context. |
 | Knowledge base coverage | The bot can only answer questions about programs documented in the S3 knowledge base. Gaps in `.md` files will result in incomplete answers. |
 
