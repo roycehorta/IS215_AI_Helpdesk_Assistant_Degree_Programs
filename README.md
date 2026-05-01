@@ -299,9 +299,14 @@ A special `__COUNTER__` row is used for atomic ticket ID generation in `TX-A001`
 node test-seed-tickets.mjs
 ```
 
-### Amazon SES (Email Replies)
+### Email — Brevo
 
-SES is used to send email replies to students when an admin responds to a ticket. You must verify the sender email address in SES before replies will work. In sandbox mode (default), the recipient address must also be verified.
+Email is handled by **Brevo** (not Amazon SES). No AWS email setup is required. Ensure `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, and `BREVO_SENDER_NAME` are set in your Lambda environment variables. The sender domain (`mis-projects.online`) must be verified in your Brevo account under **Senders & IPs**.
+
+Three email types are sent via Brevo:
+- **Ticket confirmation** — sent to the student when they submit a support ticket
+- **Ticket reply** — sent to the student when an admin replies via the dashboard
+- **Admin-created ticket** — sent to the student when an admin manually creates a ticket on their behalf
 
 ### Required IAM Permissions (Learner Lab LabRole)
 
@@ -310,12 +315,10 @@ The Lambda execution role needs the following policies:
 - `AmazonS3FullAccess`
 - `AmazonDynamoDBFullAccess`
 - `AmazonTextractFullAccess`
-- `AmazonSESFullAccess`
-
+  
 All of these are available by default under the Learner Lab `LabRole`.
 
 ---
-
 ## Deployment
 
 Follow these steps in order. Complete AWS Setup (S3, DynamoDB, SES, IAM) before deploying Lambda or the frontend.
