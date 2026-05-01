@@ -118,7 +118,7 @@ User → EC2 (React Frontend)
 | `get-tickets` | `getTickets` | Fetch all tickets for admin dashboard |
 | `save-checklist` | `saveChecklist` | Save a checklist item status |
 | `get-checklist` | `getChecklist` | Fetch full checklist from DynamoDB |
-| `send-reply` | `sendReply` | Send SES email reply to student |
+| `send-reply` | `sendTicketReply` | Send Brevo email reply to student |
 | `analyze-tor` | `analyzeDocument` | Run Textract on uploaded TOR/diploma |
 | *(default)* | Chat pipeline | Full RAG pipeline for user questions |
 
@@ -160,35 +160,30 @@ User → EC2 (React Frontend)
 │
 └── backend/
     ├── index.mjs
-    ├── src/
-    │   ├── client/
-    │   │   ├── DynamoDBClient.mjs
-    │   │   ├── OpenAIClient.mjs
-    │   │   ├── S3BucketClient.mjs
-    │   │   ├── SESClient.mjs
-    │   │   └── TextractClient.mjs
-    │   └── service/
-    │       ├── AnalyzeDocumentService.mjs
-    │       ├── BrevoService.mjs
-    │       ├── BuildContextService.mjs
-    │       ├── DetermineKeysToFetchService.mjs
-    │       ├── ExtractKeywordsService.mjs
-    │       ├── FetchS3Context.mjs
-    │       ├── GenerateAnswerService.mjs
-    │       ├── GenerateTicketService.mjs
-    │       ├── GetChecklistService.mjs
-    │       ├── GetTicketsService.mjs
-    │       ├── GetUserQuestionService.mjs
-    │       ├── MergeMemoryService.mjs
-    │       ├── SaveChecklistService.mjs
-    │       ├── SendReplyService.mjs
-    │       └── AnalyzeDocumentService.mjs
-    ├── test-s3-routing.mjs
-    ├── test-seed-tickets.mjs
-    ├── test-textract.mjs
-    ├── local-tester.mjs
-    ├── .env
-    └── logs/
+    └── src/
+        ├── client/
+        │   ├── DynamoDBClient.mjs
+        │   ├── OpenAIClient.mjs
+        │   ├── S3BucketClient.mjs
+        │   ├── SESClient.mjs
+        │   └── TextractClient.mjs
+        └── service/
+            ├── AnalyzeDocumentService.mjs
+            ├── BrevoService.mjs
+            ├── BuildContextService.mjs
+            ├── DetermineKeysToFetchService.mjs
+            ├── ExtractKeywordsService.mjs
+            ├── FetchS3Context.mjs
+            ├── GenerateAnswerService.mjs
+            ├── GenerateTicketService.mjs
+            ├── GetChecklistService.mjs
+            ├── GetTicketsService.mjs
+            ├── GetUserQuestionService.mjs
+            ├── MergeMemoryService.mjs
+            ├── SaveChecklistService.mjs
+            ├── SendReplyService.mjs
+            └── AnalyzeDocumentService.mjs
+
 ```
 
 ---
@@ -322,7 +317,7 @@ All of these are available by default under the Learner Lab `LabRole`.
 ---
 ## Deployment
 
-Follow these steps in order. Complete AWS Setup (S3, DynamoDB, SES, IAM) before deploying Lambda or the frontend.
+Follow these steps in order. Complete AWS Setup (S3, DynamoDB, IAM) before deploying Lambda or the frontend.
 
 **Deployment order:**
 1. [AWS Setup](#aws-setup) — S3, DynamoDB, IAM (do this first)
@@ -568,7 +563,7 @@ createdAt    — ISO timestamp
 - Filter by status (New, Answered)
 - Search by ticket ID, student name, email, or concern
 - Paginated table with configurable page size
-- Reply to student via ticket modal (sends email via SES)
+- Reply to student via ticket modal (sends email via Brevo)
 - Refresh button to reload latest tickets
 - Bar chart of tickets over last 7 days
 - Pie chart of status distribution
@@ -625,7 +620,7 @@ Bot recommends:
 | Database | Amazon DynamoDB (tickets + checklist) |
 | OCR | Amazon Textract (diploma text extraction) |
 | API | Amazon API Gateway (HTTP API) |
-| Email | Amazon SES (ticket reply notifications) |
+| Email | Brevo (ticket confirmation, reply, and admin-created ticket notifications) |
 
 ---
 
