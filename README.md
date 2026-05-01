@@ -659,7 +659,7 @@ This is an academic group project for IS 215. All contributions are made by enro
 | Evidor, Darvin | Backend, Lamda, AWS Integration | [@dmevidor](https://github.com/dmevidor) |
 | Hortaleza, Royce | Frontend, Chat UI | [@roycehorta](https://github.com/roycehorta) |
 | Joaquin, John Rainer | Backend, Lambda, AWS Integration | [@jmjoaquin1](https://github.com/jmjoaquin1) |
-| Llenado, Daryljade | Backend, Frontend, Ticketing | [@jedlovescpe2](https://github.com/jedlovescpe2) |
+| Llenado, Daryljade | RAG Pipepline, Frontend, Ticketing | [@jedlovescpe2](https://github.com/jedlovescpe2) |
 | Molina, Yolanda | Backend, Documentation | [@yemolina](https://github.com/yemolina) |
 
 ---
