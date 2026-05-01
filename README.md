@@ -167,22 +167,27 @@ VITE_API_URL=/api
 
 ```
 # AWS
-AWS_REGION=ap-southeast-1
+AWS_REGION=your_aws_region
 AWS_ACCESS_KEY_ID=your_access_key_id
 AWS_SECRET_ACCESS_KEY=your_secret_access_key
-AWS_SESSION_TOKEN=your_session_token     # required for AWS Academy Learner Lab only (rotates every 4 hours)
+AWS_SESSION_TOKEN=your_session_token
 
 # S3
-S3_BUCKET_NAME=your-s3-bucket-name
+S3_BUCKET_NAME=your_s3_bucket_name
 
 # DynamoDB
-DYNAMODB_TABLE_NAME=upou-helpdesk-tickets
+DYNAMODB_TABLE_NAME=your_dynamodb_table_name
 
 # OpenAI
-# IS 215 students: use the class endpoint below — do NOT use api.openai.com
+# IS 215 students: use the class endpoint — do NOT use api.openai.com
 OPENAI_ENDPOINT=https://is215-openai.upou.io/v1/chat/completions
-OPENAI_API_KEY=your_class_api_key
+OPENAI_API_KEY=your_api_key
 OPENAI_MODEL=gpt-4o-mini
+
+# Brevo
+BREVO_API_KEY=your_brevo_api_key
+BREVO_SENDER_EMAIL=your_sender_email
+BREVO_SENDER_NAME=your_sender_name
 ```
 
 > Never commit `.env` to GitHub. Both `.env` files are listed in `.gitignore`.
@@ -254,7 +259,7 @@ node test-seed-tickets.mjs
 
 ### Email — Brevo
 
-Email is handled by **Brevo** (not Amazon SES). No AWS email setup is required. Ensure `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, and `BREVO_SENDER_NAME` are set in your Lambda environment variables. The sender domain (`mis-projects.online`) must be verified in your Brevo account under **Senders & IPs**.
+Email is handled by **Brevo**. Ensure `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, and `BREVO_SENDER_NAME` are set in your Lambda environment variables. The sender domain (`mis-projects.online`) must be verified in your Brevo account under **Senders & IPs**.
 
 Three email types are sent via Brevo:
 - **Ticket confirmation** — sent to the student when they submit a support ticket
