@@ -123,3 +123,88 @@ function detectFaculties(keywords) {
   }
   return detected.size > 0 ? [...detected] : null;
 }
+function detectLevels(keywords) {
+  const levelMap = {
+    undergraduate: "undergraduate",
+    bachelor: "undergraduate",
+    associate: "undergraduate",
+    baccalaureate: "undergraduate",
+    trimester: "undergraduate",
+    masters: "masters",
+    master: "masters",
+    "master's": "masters",
+    "master's programs": "masters",
+    semester: "masters",
+    graduate: "graduate-certificate",
+    certificate: "graduate-certificate",
+    certificates: "graduate-certificate",
+    "graduate-certificate": "graduate-certificate",
+    "graduate-certificates": "graduate-certificate",
+    "graduate certificates": "graduate-certificate",
+    doctorate: "doctorate",
+    doctorates: "doctorate",
+    doctoral: "doctorate",
+    phd: "doctorate",
+    doctor: "doctorate",
+    diploma: "diploma",
+    diplomas: "diploma",
+  };
+  const found = new Set();
+  for (const k of keywords) {
+    const match = levelMap[k.toLowerCase()]; // lowercase lookup works now
+    if (match) found.add(match);
+  }
+  return found.size > 0 ? [...found] : null;
+}
+
+function buildPrefixes(faculties, levels, isBroad) {
+  const ALL_FACULTIES = ["fics", "fed", "fmds"];
+
+  // Both faculties and levels — most specific
+  if (faculties && levels) {
+    return faculties.flatMap((f) =>
+      levels.map((l) => `s3-knowledgebase/${f}/${l}/`),
+    );
+  }
+
+  // Levels only — search all faculties at those levels
+  if (!faculties && levels) {
+    return ALL_FACULTIES.flatMap((f) =>
+      levels.map((l) => `s3-knowledgebase/${f}/${l}/`),
+    );
+  }
+
+  // Broad query with specific faculty but no level — fetch that faculty's overview
+  if (isBroad && faculties && !levels) {
+    return faculties.map((f) => {
+      const name =
+        f === "fics"
+          ? "information-and-communication-studies"
+          : f === "fed"
+            ? "education"
+            : "management-and-development-studies";
+      return `s3-knowledgebase/${f}/${f}_faculty-of-${name}.md`;
+    });
+  }
+
+  // Broad query, no faculty, no level — all three overviews
+  if (isBroad && !faculties && !levels) {
+    return [
+      "s3-knowledgebase/fics/fics_faculty-of-information-and-communication-studies.md",
+      "s3-knowledgebase/fed/fed_faculty-of-education.md",
+      "s3-knowledgebase/fmds/fmds_faculty-of-management-and-development-studies.md",
+    ];
+  }
+
+  // Faculty only, not broad — search everything under that faculty
+  if (faculties && !levels) {
+    return faculties.map((f) => `s3-knowledgebase/${f}/`);
+  }
+
+  // Nothing detected — fall back to all overviews
+  return [
+    "s3-knowledgebase/fics/fics_faculty-of-information-and-communication-studies.md",
+    "s3-knowledgebase/fed/fed_faculty-of-education.md",
+    "s3-knowledgebase/fmds/fmds_faculty-of-management-and-development-studies.md",
+  ];
+}
