@@ -132,62 +132,63 @@ User → EC2 (React Frontend)
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── upou/
-│   │   │   │   ├── UpouSidebar.tsx       # Collapsible chat sidebar
-│   │   │   │   ├── TicketDialog.tsx      # Support ticket submission modal
-│   │   │   │   ├── TORUploader.tsx       # Diploma/TOR upload component
-│   │   │   │   └── SuggestionCards.tsx   # Quick-start suggestion cards
+│   │   │   │   ├── UpouSidebar.tsx
+│   │   │   │   ├── TicketDialog.tsx
+│   │   │   │   ├── TORUploader.tsx
+│   │   │   │   └── SuggestionCards.tsx
 │   │   │   └── admin/
-│   │   │       ├── AdminSidebar.tsx      # Admin navigation sidebar
-│   │   │       ├── AdminLogin.tsx        # Admin authentication
-│   │   │       ├── DashboardOverview.tsx # Stats, charts, recent activity
-│   │   │       ├── TicketsView.tsx       # Ticket table with search/filter
-│   │   │       ├── TicketModal.tsx       # Ticket detail + reply modal
-│   │   │       └── NewTicketModal.tsx    # Manual ticket creation
+│   │   │       ├── AdminSidebar.tsx
+│   │   │       ├── AdminLogin.tsx
+│   │   │       ├── DashboardOverview.tsx
+│   │   │       ├── TicketsView.tsx
+│   │   │       ├── TicketModal.tsx
+│   │   │       └── NewTicketModal.tsx
 │   │   ├── hooks/
-│   │   │   └── useChatbot.ts            # Core chatbot state + routing logic
+│   │   │   └── useChatbot.ts
 │   │   ├── pages/
-│   │   │   ├── ChatPage.tsx             # Main chat interface
-│   │   │   ├── AboutPage.tsx            # Project wiki / documentation
-│   │   │   ├── ChecklistPage.tsx        # IS 215 grading checklist tracker
-│   │   │   └── AdminDashboard.tsx       # Admin panel entry point
+│   │   │   ├── ChatPage.tsx
+│   │   │   ├── AboutPage.tsx
+│   │   │   ├── ChecklistPage.tsx
+│   │   │   └── AdminDashboard.tsx
 │   │   ├── types/
-│   │   │   ├── chat.ts                  # Message and Sender types
-│   │   │   └── ticket.ts                # Ticket type
+│   │   │   ├── chat.ts
+│   │   │   └── ticket.ts
 │   │   └── lib/
-│   │       └── chat-storage.ts          # LocalStorage conversation persistence
+│   │       └── chat-storage.ts
 │   ├── vite.config.ts
 │   └── .env
 │
 └── backend/
-    ├── index.mjs                         # Lambda handler + route dispatcher
+    ├── index.mjs
     ├── src/
     │   ├── client/
-    │   │   ├── S3BucketClient.mjs        # AWS S3 client
-    │   │   ├── DynamoDBClient.mjs        # AWS DynamoDB client
-    │   │   ├── TextractClient.mjs        # AWS Textract client
-    │   │   ├── SESClient.mjs             # AWS SES client
-    │   │   └── OpenAIClient.mjs          # OpenAI HTTP client
+    │   │   ├── DynamoDBClient.mjs
+    │   │   ├── OpenAIClient.mjs
+    │   │   ├── S3BucketClient.mjs
+    │   │   ├── SESClient.mjs
+    │   │   └── TextractClient.mjs
     │   └── service/
-    │       ├── GetUserQuestionService.mjs       # Extracts question + history
-    │       ├── MergeMemoryService.mjs           # Merges last 6 messages
-    │       ├── ExtractKeywordsService.mjs       # Stop word removal + keywords
-    │       ├── DetermineKeysToFetchService.mjs  # S3 prefix routing logic (faculty + level detection)
-    │       ├── FetchS3Context.mjs               # Lists + fetches S3 document content
-    │       ├── BuildContextService.mjs          # Assembles full OpenAI context from S3 docs
-    │       ├── GenerateAnswerService.mjs         # OpenAI call + 19-rule system prompt
-    │       ├── GenerateTicketService.mjs         # Atomic DynamoDB ticket creation
-    │       ├── GetTicketsService.mjs             # Fetch all tickets from DynamoDB
-    │       ├── SendReplyService.mjs              # SES email reply to student
-    │       ├── SaveChecklistService.mjs          # Save checklist item to DynamoDB
-    │       ├── GetChecklistService.mjs           # Fetch checklist from DynamoDB
-    │       ├── SuccessResponseService.mjs        # Shared success response helper
-    │       └── AnalyzeDocumentService.mjs        # Textract TOR/diploma analysis
-    ├── test-s3-routing.mjs               # S3 routing unit tests (8 cases)
-    ├── test-seed-tickets.mjs             # Seed 40 sample tickets to DynamoDB
-    ├── test-textract.mjs                 # Textract integration test
-    ├── local-tester.mjs                  # Full AI pipeline test (52 cases)
+    │       ├── AnalyzeDocumentService.mjs
+    │       ├── BrevoService.mjs
+    │       ├── BuildContextService.mjs
+    │       ├── DetermineKeysToFetchService.mjs
+    │       ├── ExtractKeywordsService.mjs
+    │       ├── FetchS3Context.mjs
+    │       ├── GenerateAnswerService.mjs
+    │       ├── GenerateTicketService.mjs
+    │       ├── GetChecklistService.mjs
+    │       ├── GetTicketsService.mjs
+    │       ├── GetUserQuestionService.mjs
+    │       ├── MergeMemoryService.mjs
+    │       ├── SaveChecklistService.mjs
+    │       ├── SendReplyService.mjs
+    │       └── AnalyzeDocumentService.mjs
+    ├── test-s3-routing.mjs
+    ├── test-seed-tickets.mjs
+    ├── test-textract.mjs
+    ├── local-tester.mjs
     ├── .env
-    └── logs/                             # Local test output logs
+    └── logs/
 ```
 
 ---
