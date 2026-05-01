@@ -1,417 +1,339 @@
-import { S3Client, ListObjectsV2Command, GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { s3 } from "../client/S3BucketClient.mjs";
 
-const s3 = new S3Client({ region: process.env.AWS_REGION || "ap-southeast-1" });
+const BUCKET_NAME = process.env.S3_BUCKET_NAME;
 
-const BUCKET      = process.env.S3_BUCKET_NAME;
-const BASE_PREFIX = (process.env.S3_PREFIX || "s3-knowledgebase") + "/";
-const TOP_K       = 5;   // used for specific-program searches only
+function getFileName(key) {
+  return key.split("/").pop();
+}
 
-// ── Lookup tables ─────────────────────────────────────────────────────────────
+function getFileLocation(key) {
+  const parts = key.split("/");
+  parts.pop();
+  return parts.length > 0 ? parts.join("/") : "/";
+}
 
-const FACULTY_MAP = {
-  fed: "fed",
-  "faculty of education": "fed",
-  education: "fed",
-  fics: "fics",
-  "faculty of information and communication studies": "fics",
-  "information and communication": "fics",
-  ict: "fics",
-  fmds: "fmds",
-  "faculty of management and development studies": "fmds",
-  management: "fmds",
-};
-
-const LEVEL_MAP = {
-  undergraduate: "undergraduate",  undergrad: "undergraduate",
-  bachelor: "undergraduate",       baccalaureate: "undergraduate",
-  associate: "undergraduate",      bs: "undergraduate",
-  ab: "undergraduate",             ba: "undergraduate",
-  diploma: "diploma",              "post-baccalaureate": "diploma",
-  postbaccalaureate: "diploma",
-  masters: "masters",   master: "masters",   "master's": "masters",
-  ms: "masters",        ma: "masters",       mba: "masters",
-  graduate: "masters",
-  doctorate: "doctorate",  doctoral: "doctorate",  doctor: "doctorate",
-  phd: "doctorate",        "ph.d": "doctorate",    "ph.d.": "doctorate",
-  "graduate certificate": "graduate-certificate",
-  "graduate-certificate": "graduate-certificate",
-  "grad cert": "graduate-certificate",
-  certificate: "graduate-certificate",
-  gradcert: "graduate-certificate",
-};
-
-const TOPIC_TERMS = new Set([
-  "curriculum", "admission", "admissions", "requirements", "units", "fees",
-  "tuition", "courses", "schedule", "study", "research", "thesis",
-  "dissertation", "program", "description", "goals", "elective", "core",
-  "specialization", "contact", "faculty", "staff",
-  "faculties", "programs", "departments", "offerings", "schools",
-]);
-
-const STOP_WORDS = new Set([
-  "of", "in", "to", "at", "by", "or", "an", "is", "it", "as", "be", "do",
-  "go", "if", "no", "on", "so", "up", "we", "he", "me", "my", "us", "vs",
-  "am", "are", "was", "has", "had", "the", "and", "for", "not", "but",
-  "with", "this", "that", "from", "have", "will", "been", "into", "its",
-  "our", "can", "may", "who", "why", "how", "all", "any", "new", "use",
-]);
-
-/**
- * Institution-level noise: tokens present in every document that carry no
- * discriminating signal. Also includes common academic qualifiers like
- * "degree" and "academic" that look like acronyms (2–6 alpha chars) but
- * are not program codes — preventing them from triggering FIX-5 full scans.
- */
-const NOISE_TOKENS = new Set([
-  // University identity
-  "upou", "university", "philippines", "open", "ph", "up",
-  "los", "banos", "laguna",
-  // Generic academic qualifiers
-  // FIX: "degree" is 6 alpha chars and previously matched the acronym regex,
-  //      setting acronym="degree" which (a) blocked isFullListingQuery and
-  //      (b) triggered a wasteful last-resort full-bucket scan.
-  "degree", "academic", "graduate", "postgraduate",
-  // Common question verbs stripped by keyword extractors
-  "what", "which", "where", "when", "tell", "list",
-  "give", "show", "explain", "describe",
-]);
-
-// ── Keyword classifier ────────────────────────────────────────────────────────
-
-function classifyKeywords(keywords) {
-  const result = {
-    faculty: null,
-    level: null,
-    acronym: null,
-    programTerms: [],
-    topicTerms: [],
-  };
-
-  const individualTokens = [];
-
-  for (const raw of keywords) {
-    const k = raw.toLowerCase().trim();
-    if (!k) continue;
-    if (FACULTY_MAP[k]) { result.faculty = result.faculty ?? FACULTY_MAP[k]; continue; }
-    if (LEVEL_MAP[k])   { result.level   = result.level   ?? LEVEL_MAP[k];   continue; }
-    individualTokens.push(...raw.trim().split(/\s+/).filter(Boolean));
+async function streamToString(stream) {
+  const chunks = [];
+  for await (const chunk of stream) {
+    chunks.push(chunk);
   }
-
-  for (const raw of individualTokens) {
-    const k = raw.toLowerCase();
-    if (!k) continue;
-    if (FACULTY_MAP[k])     { result.faculty  = result.faculty  ?? FACULTY_MAP[k]; continue; }
-    if (LEVEL_MAP[k])       { result.level    = result.level    ?? LEVEL_MAP[k];   continue; }
-    if (NOISE_TOKENS.has(k)) { continue; }
-    if (TOPIC_TERMS.has(k)) { result.topicTerms.push(k); continue; }
-    if (STOP_WORDS.has(k))  { continue; }
-    if (/^[A-Za-z]{2,6}$/.test(raw)) { result.acronym = result.acronym ?? k; continue; }
-    result.programTerms.push(k);
-  }
-
-  return result;
+  return Buffer.concat(chunks).toString("utf-8");
 }
 
-// ── S3 key parser ─────────────────────────────────────────────────────────────
-
-function parseS3Key(s3Key) {
-  const parts    = s3Key.split("/");
-  const filename = parts[parts.length - 1].replace(/\.md$/, "");
-  const segs     = filename.split("_");
-
-  const faculty  = segs[0] ?? null;
-  const acronym  = segs[1] ?? null;
-  const nameSlug = segs.slice(2).join("-");
-  const nameWords = nameSlug
-    .split("-")
-    .filter(w => w.length > 1 && !STOP_WORDS.has(w.toLowerCase()));
-
-  const isFacultyOverview =
-    acronym === "faculty" || (acronym ?? "").startsWith("faculty");
-
-  const level =
-    !isFacultyOverview && parts.length >= 4
-      ? parts[parts.length - 2]
-      : null;
-
-  return { faculty, acronym, nameWords, level, isFacultyOverview };
-}
-
-// ── Scoring ───────────────────────────────────────────────────────────────────
-
-function scoreFilename(parsed, classified) {
-  let score = 0;
-
-  if (classified.acronym && parsed.acronym === classified.acronym) score += 5;
-
-  for (const term of classified.programTerms) {
-    if (parsed.nameWords.includes(term) || parsed.acronym === term) score += 2;
-  }
-
-  const isFacultyTopicQuery = classified.topicTerms.some(
-    t => ["faculties", "faculty", "schools", "departments", "programs", "offerings"].includes(t),
-  );
-  const isGeneralQuery =
-    !classified.level &&
-    !classified.acronym &&
-    classified.programTerms.length === 0;
-
-  if (parsed.isFacultyOverview && (isGeneralQuery || isFacultyTopicQuery)) score += 5;
-
-  return score;
-}
-
-function scoreContent(content, classified) {
-  if (!content) return 0;
-  const text = content.toLowerCase();
-  let score = 0;
-
-  const terms = [
-    classified.acronym,
-    ...classified.programTerms,
-    ...classified.topicTerms,
-  ].filter(Boolean);
-
-  for (const term of terms) {
-    const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    const hits    = (text.match(new RegExp(`\\b${escaped}\\b`, "g")) || []).length;
-    score += Math.min(hits, 5);
-  }
-
-  return score;
-}
-// ── S3 helpers ────────────────────────────────────────────────────────────────
-
-async function listKeys(prefix) {
-  const keys = [];
-  let token;
-  do {
-    const res = await s3.send(new ListObjectsV2Command({
-      Bucket: BUCKET,
-      Prefix: prefix,
-      ...(token && { ContinuationToken: token }),
-    }));
-    for (const obj of res.Contents || []) {
-      if (obj.Key.endsWith(".md")) keys.push(obj.Key);
-    }
-    token = res.IsTruncated ? res.NextContinuationToken : null;
-  } while (token);
-  return keys;
-}
-
-async function fetchFile(key) {
+async function fetchFileContent(key) {
   try {
-    const res = await s3.send(new GetObjectCommand({ Bucket: BUCKET, Key: key }));
-    const chunks = [];
-    for await (const chunk of res.Body) chunks.push(chunk);
-    return Buffer.concat(chunks).toString("utf-8");
-  } catch {
+    const command = new GetObjectCommand({ Bucket: BUCKET_NAME, Key: key });
+    const response = await s3.send(command);
+    const content = await streamToString(response.Body);
+    return content;
+  } catch (error) {
+    console.error(`Failed to read file: ${key}`, error.message);
     return null;
   }
 }
 
-// ── Main export ───────────────────────────────────────────────────────────────
+function detectBroadQuery(keywords) {
+  const broadTerms = [
+    "faculties",
+    "faculty",
+    "programs",
+    "all",
+    "list",
+    "upou",
+    "offered",
+    "available",
+    "offer",
+    "offers",
+    "group",
+    "catalog",
+  ];
+  return keywords.some((k) => broadTerms.includes(k.toLowerCase()));
+}
 
-/**
- * fetchS3Context
- *
- * Searches S3 for UPOU degree program documents relevant to the given keywords.
- *
- * Three-tier search strategy:
- *   Tier 1 — S3 prefix filter  (zero reads  — faculty + level path narrowing)
- *   Tier 2 — Filename scoring  (zero reads  — acronym + name word matching)
- *   Tier 3 — Content scoring   (file reads  — topic/acronym hits in body text)
- *
- * Result cap:
- *   • Full-listing queries (faculty scoped, no specific program signal)
- *     → returns ALL files in the pool (no cap) so every program is included.
- *   • Specific-program queries (acronym or program name present)
- *     → capped at TOP_K = 5, ranked by relevance score.
- *
- * @param   {string[]} keywords
- * @returns {Promise<object>}
- */
+function detectFaculties(keywords) {
+  const facultyMap = {
+    fics: "fics",
+    information: "fics",
+    communication: "fics",
+    multimedia: "fics",
+    technology: "fics",
+    digital: "fics",
+    it: "fics",
+    computer: "fics",
+    media: "fics",
+    fed: "fed",
+    education: "fed",
+    teaching: "fed",
+    teacher: "fed",
+    bes: "fed",
+    mde: "fed",
+    gcde: "fed",
+    fmds: "fmds",
+    management: "fmds",
+    public: "fmds",
+    health: "fmds",
+    social: "fmds",
+    environment: "fmds",
+    land: "fmds",
+    sustainability: "fmds",
+    nursing: "fmds",
+    research: "fmds",
+    governance: "fmds",
+    mis: "fics",
+    mdc: "fics",
+    dcs: "fics",
+    aadda: "fics",
+    asit: "fics",
+    bams: "fics",
+    dcomm: "fics",
+    malle: "fed",
+    masse: "fed",
+    gcde: "fed",
+    dlle: "fed",
+    dmt: "fed",
+    dst: "fed",
+    dsse: "fed",
+    phded: "fed",
+    mpm: "fmds",
+    msw: "fmds",
+    mih: "fmds",
+    menrm: "fmds",
+    mlvm: "fmds",
+    mrdm: "fmds",
+    man: "fmds",
+    mne: "fmds",
+    mas: "fmds",
+    mcdr: "fmds",
+    aade: "fmds",
+    dsus: "fmds",
+    gcas: "fmds",
+    dih: "fmds",
+    dlup: "fmds",
+    dlvm: "fmds",
+    drdm: "fmds",
+    dsw: "fmds",
+    dwd: "fmds",
+    denrm: "fmds",
+  };
+  const detected = new Set();
+  for (const k of keywords) {
+    const faculty = facultyMap[k.toLowerCase()];
+    if (faculty) detected.add(faculty);
+  }
+  return detected.size > 0 ? [...detected] : null;
+}
+
+function detectLevels(keywords) {
+  const levelMap = {
+    undergraduate: "undergraduate",
+    bachelor: "undergraduate",
+    associate: "undergraduate",
+    baccalaureate: "undergraduate",
+    trimester: "undergraduate",
+    masters: "masters",
+    master: "masters",
+    "master's": "masters",
+    "master's programs": "masters",
+    semester: "masters",
+    graduate: "graduate-certificate",
+    certificate: "graduate-certificate",
+    certificates: "graduate-certificate",
+    "graduate-certificate": "graduate-certificate",
+    "graduate-certificates": "graduate-certificate",
+    "graduate certificates": "graduate-certificate",
+    doctorate: "doctorate",
+    doctorates: "doctorate",
+    doctoral: "doctorate",
+    phd: "doctorate",
+    doctor: "doctorate",
+    diploma: "diploma",
+    diplomas: "diploma",
+  };
+  const found = new Set();
+  for (const k of keywords) {
+    const match = levelMap[k.toLowerCase()]; // lowercase lookup works now
+    if (match) found.add(match);
+  }
+  return found.size > 0 ? [...found] : null;
+}
+
+function buildPrefixes(faculties, levels, isBroad) {
+  const ALL_FACULTIES = ["fics", "fed", "fmds"];
+
+  // Both faculties and levels — most specific
+  if (faculties && levels) {
+    return faculties.flatMap((f) =>
+      levels.map((l) => `s3-knowledgebase/${f}/${l}/`),
+    );
+  }
+
+  // Levels only — search all faculties at those levels
+  if (!faculties && levels) {
+    return ALL_FACULTIES.flatMap((f) =>
+      levels.map((l) => `s3-knowledgebase/${f}/${l}/`),
+    );
+  }
+
+  // Broad query with specific faculty but no level — fetch that faculty's overview
+  if (isBroad && faculties && !levels) {
+    return faculties.map((f) => {
+      const name =
+        f === "fics"
+          ? "information-and-communication-studies"
+          : f === "fed"
+            ? "education"
+            : "management-and-development-studies";
+      return `s3-knowledgebase/${f}/${f}_faculty-of-${name}.md`;
+    });
+  }
+
+  // Broad query, no faculty, no level — all three overviews
+  if (isBroad && !faculties && !levels) {
+    return [
+      "s3-knowledgebase/fics/fics_faculty-of-information-and-communication-studies.md",
+      "s3-knowledgebase/fed/fed_faculty-of-education.md",
+      "s3-knowledgebase/fmds/fmds_faculty-of-management-and-development-studies.md",
+    ];
+  }
+
+  // Faculty only, not broad — search everything under that faculty
+  if (faculties && !levels) {
+    return faculties.map((f) => `s3-knowledgebase/${f}/`);
+  }
+
+  // Nothing detected — fall back to all overviews
+  return [
+    "s3-knowledgebase/fics/fics_faculty-of-information-and-communication-studies.md",
+    "s3-knowledgebase/fed/fed_faculty-of-education.md",
+    "s3-knowledgebase/fmds/fmds_faculty-of-management-and-development-studies.md",
+  ];
+}
+
+async function fetchKeysForPrefix(prefix) {
+  try {
+    const command = new ListObjectsV2Command({
+      Bucket: BUCKET_NAME,
+      Prefix: prefix,
+    });
+    const response = await s3.send(command);
+    if (!response.Contents || response.Contents.length === 0) {
+      console.log("No documents found in prefix:", prefix);
+      return [];
+    }
+    return response.Contents.map((obj) => obj.Key);
+  } catch (error) {
+    console.error(`Failed to fetch keys for prefix: ${prefix}`, error);
+    return [];
+  }
+}
+
+function buildNoMatchMessage(faculties, levels, keywords) {
+  if (!faculties && !levels) {
+    return `I can only answer questions about UPOU degree programs. Please ask about a specific faculty (FICS, FED, FMDS) or program level (undergraduate, masters, doctorate, diploma, graduate-certificate).`;
+  }
+  if (faculties && levels) {
+    return `No ${levels.join(", ")} programs found under ${faculties.join(" and ").toUpperCase()}. Please verify the faculty offers these program levels.`;
+  }
+  if (faculties && !levels) {
+    return `No documents found under ${faculties.join(" and ").toUpperCase()}. Please try specifying a program level such as undergraduate, masters, doctorate, diploma, or graduate-certificate.`;
+  }
+  if (!faculties && levels) {
+    return `No ${levels.join(", ")} programs found across all faculties. Please try specifying a faculty such as FICS, FED, or FMDS.`;
+  }
+  return `No documents found matching your search keywords: "${keywords.join(", ")}".`;
+}
+
 export async function fetchS3Context(keywords) {
+  try {
+    console.log("Searching S3 for keywords:", keywords);
 
-  if (!BUCKET) {
-    return { success: false, error: "S3_BUCKET_NAME environment variable is not set." };
-  }
-  if (!Array.isArray(keywords) || keywords.length === 0) {
-    return { success: false, error: "keywords must be a non-empty array." };
-  }
+    const faculties = detectFaculties(keywords);
+    const levels = detectLevels(keywords);
+    const isBroad = detectBroadQuery(keywords);
 
-  // ── Step 1: Classify ───────────────────────────────────────────────────────
-  const classified = classifyKeywords(keywords);
+    console.log("Detected Faculties:", faculties);
+    console.log("Detected Levels:  ", levels);
+    console.log("Is Broad Query:   ", isBroad);
 
-  const isFacultyListQuery = classified.topicTerms.some(
-    t => ["faculties", "faculty", "schools", "departments", "programs", "offerings"].includes(t),
-  );
+    const prefixes = buildPrefixes(faculties, levels, isBroad);
+    console.log("S3 Prefixes:", prefixes);
 
-  const hasNavigationSignal =
-    classified.faculty              ||
-    classified.level                ||
-    classified.acronym              ||
-    classified.programTerms.length > 0 ||
-    isFacultyListQuery;
+    if (prefixes.length === 0) {
+      return {
+        found: false,
+        matched: 0,
+        faculties,
+        levels,
+        keywords,
+        prefixes: [],
+        message: buildNoMatchMessage(faculties, levels, keywords),
+        documents: [],
+      };
+    }
 
-  if (!hasNavigationSignal) {
-    return {
-      success: true,
-      found: false,
-      message:
-        "Keywords are too general to locate a specific program. " +
-        "Please include a faculty name, program level, or program acronym.",
-      offerTicket: true,
-      ticketPrompt:
-        "Would you like to submit a support ticket so a UPOU staff member can answer your inquiry directly?",
-      classifiedKeywords: classified,
-    };
-  }
+    const isDirectFile = (prefix) => prefix.endsWith(".md");
 
-  // ── Step 2 (Tier 1): S3 prefix filter ─────────────────────────────────────
-  let prefix = BASE_PREFIX;
-  if (classified.faculty)                     prefix += `${classified.faculty}/`;
-  if (classified.faculty && classified.level) prefix += `${classified.level}/`;
+    const allKeysNested = await Promise.all(
+      prefixes.map((prefix) =>
+        isDirectFile(prefix)
+          ? Promise.resolve([prefix])
+          : fetchKeysForPrefix(prefix),
+      ),
+    );
 
-  let allKeys = await listKeys(prefix);
-
-  if (!classified.faculty && classified.level) {
-    allKeys = allKeys.filter(k => k.includes(`/${classified.level}/`));
-  }
+    const allKeys = [...new Set(allKeysNested.flat())];
+    console.log("All Matched Keys:", allKeys);
 
     if (allKeys.length === 0) {
-    return {
-      success: true,
-      found: false,
-      message: "No documents found for the specified faculty or level.",
-      offerTicket: true,
-      ticketPrompt:
-        "Would you like to submit a support ticket so a UPOU staff member can answer your inquiry directly?",
-      classifiedKeywords: classified,
-    };
-  }
-
-  // ── Step 3 (Tier 2): Filename scoring ──────────────────────────────────────
-  const filenameScored = allKeys.map(key => {
-    const parsed = parseS3Key(key);
-    return { key, parsed, filenameScore: scoreFilename(parsed, classified) };
-  });
-
-  // ── Determine query mode ───────────────────────────────────────────────────
-  //
-  // A "full listing" query is one where the user has scoped to a specific
-  // faculty (prefix already narrows the pool) but has not named a particular
-  // program via acronym or name words.
-  //
-  // Examples → full listing:
-  //   ["FICS"]                → faculty=fics, no acronym/programTerms
-  //   ["FICS","programs"]     → faculty=fics, topicTerms=[programs]
-  //   ["FICS","degree","programs"] → "degree" in NOISE_TOKENS, no acronym
-  //   ["FMDS","masters"]      → faculty=fmds, level=masters, no acronym
-  //
-  // Examples → specific search (TOP_K=5, content-scored):
-  //   ["MIS","curriculum"]    → acronym=mis
-  //   ["FICS","social work"]  → programTerms=[social,work]
-  const isFullListingQuery =
-    !!classified.faculty &&
-    !classified.acronym &&
-    classified.programTerms.length === 0;
-
-  // FIX — Full listing queries bypass content scoring entirely.
-  // When the pool is already narrowed to a specific faculty (and optionally
-  // level), every file in it is relevant by definition. Running content
-  // scoring on topic terms like "programs" would arbitrarily exclude files
-  // that never use that word — individual program files are highly specific
-  // and often describe a single program without saying "programs" at all.
-  const needsContentScore =
-    !isFullListingQuery && (
-      classified.acronym !== null        ||
-      classified.programTerms.length > 0 ||
-      classified.topicTerms.length > 0
+      return {
+        found: false,
+        matched: 0,
+        faculties,
+        levels,
+        keywords,
+        prefixes,
+        message: buildNoMatchMessage(faculties, levels, keywords),
+        documents: [],
+      };
+    }
+    const isSingleProgram = allKeys.length <= 3;
+    const limitedKeys = isSingleProgram ? allKeys : allKeys.slice(0, 15);
+    console.log(
+      `Fetching contents of ${limitedKeys.length} files (limited from ${allKeys.length})...`,
     );
 
-  // Full listing → no cap; specific search → TOP_K = 5.
-  const effectiveTopK = isFullListingQuery ? allKeys.length : TOP_K;
+    const documentContents = await Promise.all(
+      limitedKeys.map(async (key) => {
+        const content = await fetchFileContent(key);
 
-  let finalScored;
-
-  if (!needsContentScore) {
-    finalScored = filenameScored.map(d => ({
-      ...d,
-      contentScore: 0,
-      totalScore: d.filenameScore > 0 ? d.filenameScore : 1,
-      content: null,
-    }));
-  } else {
-    const hasAnyFilenameHit = filenameScored.some(d => d.filenameScore > 0);
-
-    const candidates = filenameScored.filter(d =>
-      d.filenameScore > 0 ||
-      allKeys.length <= 15 ||
-      (!hasAnyFilenameHit && classified.acronym !== null),
-    );
-
-    finalScored = await Promise.all(
-      candidates.map(async ({ key, parsed, filenameScore }) => {
-        const content      = await fetchFile(key);
-        const contentScore = scoreContent(content, classified);
         return {
-          key, parsed, filenameScore, contentScore,
-          totalScore: filenameScore + contentScore,
+          fileName: getFileName(key),
+          fileLocation: `s3://${BUCKET_NAME}/${key}`,
+          folder: getFileLocation(key),
+          key,
           content,
+          contentLength: content ? content.length : 0,
+          contentFetched: content !== null,
         };
       }),
     );
-  }
 
-    // ── Step 5: Filter, sort, cap ──────────────────────────────────────────────
-  const MIN_SCORE = 1;
+    const successfulDocs = documentContents.filter((doc) => doc.contentFetched);
+    const failedDocs = documentContents.filter((doc) => !doc.contentFetched);
 
-  const ranked = finalScored
-    .filter(d => d.totalScore >= MIN_SCORE)
-    .sort((a, b) => b.totalScore - a.totalScore)
-    .slice(0, effectiveTopK);
-
-  if (ranked.length === 0) {
     return {
-      success: true,
-      found: false,
-      message: "No relevant degree program documents were found for the provided keywords.",
-      offerTicket: true,
-      ticketPrompt:
-        "Would you like to submit a support ticket so a UPOU staff member can answer your inquiry directly?",
-      classifiedKeywords: classified,
+      found: true,
+      matched: successfulDocs.length,
+      faculties,
+      levels,
+      keywords,
+      prefixes,
+      documents: successfulDocs,
+      failed: failedDocs.length > 0 ? failedDocs.map((d) => d.fileName) : [],
     };
+  } catch (error) {
+    console.error("Fetch S3 Context Error:", error);
+    throw new Error("Failed to fetch context from S3.");
   }
-
-  // ── Step 6: Ensure content is loaded for all top results ──────────────────
-  const documents = await Promise.all(
-    ranked.map(async ({ key, parsed, filenameScore, contentScore, totalScore, content }) => {
-      const finalContent = content ?? await fetchFile(key);
-      return {
-        key,
-        metadata: {
-          faculty:           parsed.faculty?.toUpperCase() ?? null,
-          level:             parsed.level ?? null,
-          acronym:           parsed.isFacultyOverview ? null : parsed.acronym?.toUpperCase() ?? null,
-          isFacultyOverview: parsed.isFacultyOverview,
-        },
-        scores: {
-          filename: filenameScore,
-          content:  contentScore ?? 0,
-          total:    totalScore,
-        },
-        content: finalContent,
-      };
-    }),
-  );
-
-  return {
-    success: true,
-    found: true,
-    totalScanned: allKeys.length,
-    totalMatched: ranked.length,
-    classifiedKeywords: classified,
-    documents,
-  };
 }

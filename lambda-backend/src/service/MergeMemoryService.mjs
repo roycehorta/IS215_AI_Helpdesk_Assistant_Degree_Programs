@@ -1,3 +1,4 @@
+// Added MergeMemoryService
 export const mergeMemory = (userQuestion, chatHistory) => {
   console.log("Inside Merge Memory Service");
 
@@ -7,7 +8,7 @@ export const mergeMemory = (userQuestion, chatHistory) => {
     "program description", "program goals", "mode of instruction",
     "curriculum", "courses", "core courses", "elective", "program of study",
     "admission", "requirements", "thesis", "units", "first year", "second year",
-    "tell me more", "what else", "more details", "more info",
+    "tell me more", "what else", "more details", "more info","overview", 
   ];
 
   const levelKeywords = [

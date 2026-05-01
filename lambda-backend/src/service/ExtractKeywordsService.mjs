@@ -1,3 +1,4 @@
+// Common English stop words to filter out
 const STOP_WORDS = new Set([
   "a", "an", "the", "and", "or", "but", "in", "on", "at", "to", "for",
   "of", "with", "by", "from", "is", "it", "its", "was", "are", "were",
@@ -13,6 +14,15 @@ const STOP_WORDS = new Set([
   "please", "want", "need", "know", "get", "make", "like", "use"
 ]);
 
+// To avoid filtering important acronyms
+const PRESERVE_TERMS = new Set([
+  "fed", "fics", "fmds", "bes", "bams", "mde", "mpm", "msw", "mis",
+  "mdc", "asit", "dcs", "aadda", "aade", "gcde", "gcas", "dsus", "mih",
+  "mne", "mrdm", "mcdr", "menrm", "mlvm", "man", "mas", "dlle", "dmt",
+  "dst", "dsse", "malle", "masse", "mih", "dcomm", "denrm", "dlup",
+  "dlvm", "drdm", "dsw", "dwd", "asidt", "aa", "upou", "tor", "myportal",
+  "law", "medicine", "md", "llb",
+
 export function extractKeywords(searchTarget) {
   console.log("+++++++ Inside the Extract Keywords Service +++++++");
   console.log("Search Target :", searchTarget);
@@ -27,12 +37,13 @@ export function extractKeywords(searchTarget) {
     console.log("Cleaned Text:", cleanText);
 
     // 3. Split into individual words
-    const words = cleanText.split(/\s+/).filter(word => word.length > 0);
+    const words = cleanText.split(/\s+/).filter((word) => word.length > 0)
     console.log("Words:", words);
 
     // 4. Filter out stop words and short words (less than 3 characters)
-    const keywords = words.filter(word =>
-        !STOP_WORDS.has(word) && word.length >= 3
+    const keywords = words.filter(
+      (word) =>
+        PRESERVE_TERMS.has(word) || (!STOP_WORDS.has(word) && word.length >= 3),
     );
     console.log("Keywords after stop word removal:", keywords);
 

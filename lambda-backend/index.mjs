@@ -1,3 +1,8 @@
+import {
+  sendAdminCreatedTicket,
+  sendTicketConfirmation,
+  sendTicketReply,
+} from "./src/service/BrevoService.mjs";
 import { extractKeywords } from "./src/service/ExtractKeywordsService.mjs";
 import { fetchS3Context } from "./src/service/FetchS3Context.mjs";
 import { generateAnswer } from "./src/service/GenerateAnswerService.mjs";
@@ -7,7 +12,6 @@ import { getTickets } from "./src/service/GetTicketsService.mjs";
 import { getUserQuestion } from "./src/service/GetUserQuestionService.mjs";
 import { mergeMemory } from "./src/service/MergeMemoryService.mjs";
 import { saveChecklist } from "./src/service/SaveChecklistService.mjs";
-import { sendReply } from "./src/service/SendReplyService.mjs";
 
 // ── Shared CORS headers ───────────────────────────────────────────────────────
 const CORS = {
@@ -29,6 +33,7 @@ export const handler = async (event) => {
   // Parse body first
   const body = JSON.parse(event.body || "{}");
   console.log("Incoming _route:", body._route);
+  const repeatCount = body.repeatCount ?? 0;
 
   if (body._route === "ticket") {
     try {
@@ -53,7 +58,6 @@ export const handler = async (event) => {
       };
     }
   }
-}
 
   if (body._route === "get-tickets") {
     try {
@@ -68,27 +72,6 @@ export const handler = async (event) => {
       };
     }
   }
-
-     // ── Send reply ───────────────────────────────────────────
-  if (body._route === "send-reply") {
-    try {
-      const result = await sendReply(
-        body.toEmail,
-        body.ticketId,
-        body.replyText,
-        body.studentName,
-      );
-      return { statusCode: 200, headers: CORS, body: JSON.stringify(result) };
-    } catch (error) {
-      console.error("Send Reply Route Error:", error.message);
-      return {
-        statusCode: 500,
-        headers: CORS,
-        body: JSON.stringify({ error: "Failed to send reply." }),
-      };
-    }
-  }
-}
 
   // ── Save checklist ───────────────────────────────────
   if (body._route === "save-checklist") {
@@ -120,15 +103,16 @@ export const handler = async (event) => {
     }
   }
 
-  // ── Send reply ───────────────────────────────────────────
+ // ── send-reply route (admin replies) ─────────────────────────────────────────
   if (body._route === "send-reply") {
     try {
-      const result = await sendReply(
-        body.toEmail,
-        body.ticketId,
-        body.replyText,
-        body.studentName,
-      );
+        const result = await sendTicketReply({
+          toEmail: body.toEmail,
+          toName: body.studentName,
+          ticketId: body.ticketId,
+          subject: body.subject ?? "Support Ticket",
+          replyText: body.replyText,
+        });
       return { statusCode: 200, headers: CORS, body: JSON.stringify(result) };
     } catch (error) {
       console.error("Send Reply Route Error:", error.message);
@@ -136,6 +120,48 @@ export const handler = async (event) => {
         statusCode: 500,
         headers: CORS,
         body: JSON.stringify({ error: "Failed to send reply." }),
+      };
+    }
+  }
+
+ // ── ticket-confirmation route (student opens ticket) ─────────────────────────
+  if (body._route === "ticket-confirmation") {
+    try {
+      const result = await sendTicketConfirmation({
+        toEmail: body.toEmail,
+        toName: body.studentName,
+        ticketId: body.ticketId,
+        subject: body.subject,
+        description: body.description,
+      });
+      return { statusCode: 200, headers: CORS, body: JSON.stringify(result) };
+    } catch (error) {
+      console.error("Ticket Confirmation Route Error:", error.message);
+      return {
+        statusCode: 500,
+        headers: CORS,
+        body: JSON.stringify({ error: "Failed to send confirmation." }),
+      };
+    }
+  }
+
+// ── admin-ticket route (admin manually creates ticket) ───────────────────────
+  if (body._route === "admin-ticket") {
+    try {
+      const result = await sendAdminCreatedTicket({
+        toEmail: body.toEmail,
+        toName: body.studentName,
+        ticketId: body.ticketId,
+        subject: body.subject,
+        description: body.description,
+      });
+      return { statusCode: 200, headers: CORS, body: JSON.stringify(result) };
+    } catch (error) {
+      console.error("Admin Ticket Route Error:", error.message);
+      return {
+        statusCode: 500,
+        headers: CORS,
+        body: JSON.stringify({ error: "Failed to send admin ticket email." }),
       };
     }
   }
@@ -169,7 +195,12 @@ export const handler = async (event) => {
     const searchTarget = await mergeMemory(userQuestion, chatHistory);
     const keywords = await extractKeywords(searchTarget);
     const s3Context = await fetchS3Context(keywords);
-    const result = await generateAnswer(userQuestion, chatHistory, s3Context);
+    const result = await generateAnswer(
+      userQuestion,
+      chatHistory,
+      s3Context,
+      repeatCount,
+    );
 
     return {
       statusCode: 200,
@@ -192,4 +223,4 @@ export const handler = async (event) => {
       }),
     };
   }
-}
+};
