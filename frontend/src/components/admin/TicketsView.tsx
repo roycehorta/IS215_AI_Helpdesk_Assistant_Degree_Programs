@@ -161,7 +161,7 @@ const TicketsView: FC<Props> = ({ tickets, setTickets, onMenuOpen }) => {
           <div className="hidden sm:flex items-center gap-2 border-l border-gray-200 pl-3">
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center text-white font-bold text-xs">DR</div>
             <div>
-              <p className="text-xs font-semibold text-gray-800 leading-tight">Dr. Ramona Aquino</p>
+              <p className="text-xs font-semibold text-gray-800 leading-tight">Helpdesk Admin</p>
               <p className="text-[10px] text-gray-400">Administrator</p>
             </div>
           </div>

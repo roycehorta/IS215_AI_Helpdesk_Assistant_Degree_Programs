@@ -1,6 +1,6 @@
 // frontend/src/components/upou/SuggestionCards.tsx
 import { Card } from "@/components/ui/card";
-import { Building2, GraduationCap, Ticket } from "lucide-react";
+import { Building2, GraduationCap } from "lucide-react";
 
 const SUGGESTIONS = [
   {
@@ -16,12 +16,7 @@ const SUGGESTIONS = [
     prompt: "Browse by Faculty Division",
   },
  
-  {
-    icon: Ticket,
-    title: "Open a Support Ticket",
-    description: "Need help? Contact our helpdesk",
-    prompt: "No, open an IT Helpdesk Ticket",
-  },
+
 ];
 export function SuggestionCards({ onSelect }: { onSelect: (prompt: string) => void }) {
   return (

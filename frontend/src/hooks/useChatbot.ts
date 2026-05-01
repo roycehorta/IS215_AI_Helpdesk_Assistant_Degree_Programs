@@ -11,6 +11,7 @@ import { Ticket } from "../types/ticket";
 
 interface ChatResponse {
   answer: string;
+  isRelevant?: boolean;
 }
 
 export const MENUS = {
@@ -24,8 +25,8 @@ export const MENUS = {
   ],
   LEVEL_1_FACULTY: [
     "Faculty of Education (FEd)",
-    "Information and Communication Studies (FICS)",
-    "Management and Development Studies (FMDS)",
+    "Faculty of Information and Communication Studies (FICS)",
+    "Faculty of Management and Development Studies (FMDS)",
   ],
   LEVEL_3_TRAPPER: [
     "Yes, back to Main Menu",
@@ -51,6 +52,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
   const [messages, setMessages] = useState<Message[]>([WELCOME]);
   const [isTyping, setIsTyping] = useState(false);
   const [currentMenu, setCurrentMenu] = useState<string[]>(MENUS.LEVEL_0);
+  const recentQuestionsRef = useRef<string[]>([]);
   const [ticketStep, setTicketStep] = useState<
     "idle" | "subject" | "description" | "email"
   >("idle");
@@ -64,7 +66,6 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
   // trapper flag — set to true when 3rd API call completes
   // actual message fires only after animation completes via onAnimationComplete
   const shouldShowTrapperRef = useRef(false);
-  const onAnimationCompleteRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     const stored = loadConversations();
@@ -103,6 +104,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
     setTicketStep("idle");
     setDraftTicket({});
     setApiCallCount(0);
+    recentQuestionsRef.current = [];
     shouldShowTrapperRef.current = false;
   };
 
@@ -279,14 +281,6 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       return true;
     }
 
-    if (
-      lower.includes("open an it helpdesk ticket") ||
-      lower.includes("open an it ticket")
-    ) {
-      setTicketDialogOpen(true);
-      return true;
-    }
-
     if (lower === "continue chat") {
       setMessages((prev) => [...prev, { text, sender: "user" }]);
       setCurrentMenu([]);
@@ -331,7 +325,7 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
           setMessages((prev) => [
             ...prev,
             {
-              text: "Please select a faculty:\n* [Faculty of Education (FEd)](#action)\n* [Information and Communication Studies (FICS)](#action)\n* [Management and Development Studies (FMDS)](#action)",
+              text: "Please select a faculty:\n* [Faculty of Education (FEd)](#action)\n* [Faculty of Information and Communication Studies (FICS)](#action)\n* [Faculty of Management and Development Studies (FMDS)](#action)",
               sender: "bot",
               timestamp: Date.now(),
             },
@@ -405,11 +399,23 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       content: msg.sender === "bot" ? "" : msg.text,
     }));
 
+    const questionCount = recentQuestionsRef.current.filter(
+      (q) => q.toLowerCase() === text.toLowerCase(),
+    ).length;
+    recentQuestionsRef.current = [
+      ...recentQuestionsRef.current.slice(-10),
+      text.toLowerCase(),
+    ];
+
     try {
       const response = await fetch(import.meta.env.VITE_API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ question: text, history: historyPayload }),
+        body: JSON.stringify({
+          question: text,
+          history: historyPayload,
+          repeatCount: questionCount,
+        }),
       });
       const data: ChatResponse = await response.json();
 
@@ -421,8 +427,15 @@ export const useChatbot = (onTicketCreate: (ticket: Ticket) => void) => {
       const newCount = apiCallCount + 1;
       setApiCallCount(newCount);
 
-      if (newCount % 3 === 0) {
-        // Set flag — trapper fires AFTER animation completes
+      const isRelevant = data.isRelevant ?? true;
+      const hasTicketLink =
+        data.answer?.includes("[Open a Support Ticket](#action)") ?? false;
+
+      if (!isRelevant && !hasTicketLink) {
+        shouldShowTrapperRef.current = true;
+      } else if (!isRelevant && hasTicketLink) {
+        setCurrentMenu([]);
+      } else if (newCount % 3 === 0) {
         shouldShowTrapperRef.current = true;
       } else {
         setCurrentMenu([]);
