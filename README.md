@@ -89,57 +89,58 @@ User → EC2 (React Frontend)
 │   ├── src/
 │   │   ├── components/
 │   │   │   ├── upou/
-│   │   │   │   ├── UpouSidebar.tsx
-│   │   │   │   ├── TicketDialog.tsx
-│   │   │   │   ├── TORUploader.tsx
-│   │   │   │   └── SuggestionCards.tsx
+│   │   │   │   ├── UpouSidebar.tsx       # Collapsible chat sidebar
+│   │   │   │   ├── TicketDialog.tsx      # Support ticket submission modal
+│   │   │   │   ├── TORUploader.tsx       # Diploma/TOR upload component
+│   │   │   │   └── SuggestionCards.tsx   # Quick-start suggestion cards
 │   │   │   └── admin/
-│   │   │       ├── AdminSidebar.tsx
-│   │   │       ├── AdminLogin.tsx
-│   │   │       ├── DashboardOverview.tsx
-│   │   │       ├── TicketsView.tsx
-│   │   │       ├── TicketModal.tsx
-│   │   │       └── NewTicketModal.tsx
+│   │   │       ├── AdminSidebar.tsx      # Admin navigation sidebar
+│   │   │       ├── AdminLogin.tsx        # Admin authentication
+│   │   │       ├── DashboardOverview.tsx # Stats, charts, recent activity
+│   │   │       ├── TicketsView.tsx       # Ticket table with search/filter
+│   │   │       ├── TicketModal.tsx       # Ticket detail + reply modal
+│   │   │       └── NewTicketModal.tsx    # Manual ticket creation
 │   │   ├── hooks/
-│   │   │   └── useChatbot.ts
+│   │   │   └── useChatbot.ts            # Core chatbot state + routing logic
 │   │   ├── pages/
-│   │   │   ├── ChatPage.tsx
-│   │   │   ├── AboutPage.tsx
-│   │   │   ├── ChecklistPage.tsx
-│   │   │   └── AdminDashboard.tsx
+│   │   │   ├── ChatPage.tsx             # Main chat interface
+│   │   │   ├── AboutPage.tsx            # Project wiki / documentation
+│   │   │   ├── ChecklistPage.tsx        # IS 215 grading checklist tracker
+│   │   │   └── AdminDashboard.tsx       # Admin panel entry point
 │   │   ├── types/
-│   │   │   ├── chat.ts
-│   │   │   └── ticket.ts
+│   │   │   ├── chat.ts                  # Message and Sender types
+│   │   │   └── ticket.ts                # Ticket type
 │   │   └── lib/
-│   │       └── chat-storage.ts
+│   │       └── chat-storage.ts          # LocalStorage conversation persistence
 │   ├── vite.config.ts
 │   └── .env
 │
 └── backend/
-    ├── index.mjs
-    └── src/
-        ├── client/
-        │   ├── DynamoDBClient.mjs
-        │   ├── OpenAIClient.mjs
-        │   ├── S3BucketClient.mjs
-        │   ├── SESClient.mjs
-        │   └── TextractClient.mjs
-        └── service/
-            ├── AnalyzeDocumentService.mjs
-            ├── BrevoService.mjs
-            ├── BuildContextService.mjs
-            ├── DetermineKeysToFetchService.mjs
-            ├── ExtractKeywordsService.mjs
-            ├── FetchS3Context.mjs
-            ├── GenerateAnswerService.mjs
-            ├── GenerateTicketService.mjs
-            ├── GetChecklistService.mjs
-            ├── GetTicketsService.mjs
-            ├── GetUserQuestionService.mjs
-            ├── MergeMemoryService.mjs
-            ├── SaveChecklistService.mjs
-            ├── SendReplyService.mjs
-            └── AnalyzeDocumentService.mjs
+    ├── index.mjs                                   # Lambda handler + route dispatcher
+    ├── src/
+    │   ├── client/
+    │   │   ├── S3BucketClient.mjs                  # AWS S3 client
+    │   │   ├── DynamoDBClient.mjs                  # AWS DynamoDB client
+    │   │   ├── TextractClient.mjs                  # AWS Textract client
+    │   │   ├── SESClient.mjs                       # AWS SES client
+    │   │   └── OpenAIClient.mjs                    # OpenAI HTTP client
+    │   └── service/
+    │       ├── GetUserQuestionService.mjs           # Extracts question + history
+    │       ├── MergeMemoryService.mjs               # Merges last 6 messages
+    │       ├── ExtractKeywordsService.mjs           # Stop word removal + keywords
+    │       ├── DetermineKeysToFetchService.mjs      # S3 prefix routing logic (faculty + level detection)
+    │       ├── FetchS3Context.mjs                   # Lists + fetches S3 document content
+    │       ├── BuildContextService.mjs              # Assembles full OpenAI context from S3 docs
+    │       ├── GenerateAnswerService.mjs            # OpenAI call + 19-rule system prompt
+    │       ├── GenerateTicketService.mjs            # Atomic DynamoDB ticket creation
+    │       ├── GetTicketsService.mjs                # Fetch all tickets from DynamoDB
+    │       ├── BrevoService.mjs                     # Brevo email — reply, confirmation, admin-created
+    │       ├── SendReplyService.mjs                 # Brevo email reply to student
+    │       ├── SaveChecklistService.mjs             # Save checklist item to DynamoDB
+    │       ├── GetChecklistService.mjs              # Fetch checklist from DynamoDB
+    │       ├── SuccessResponseService.mjs           # Shared success response helper
+    │       └── AnalyzeDocumentService.mjs           # Textract TOR/diploma analysis
+    └── .env
 
 ```
 
@@ -257,6 +258,20 @@ A special `__COUNTER__` row is used for atomic ticket ID generation in `TX-A001`
 
 Email is handled by **Brevo**. Ensure `BREVO_API_KEY`, `BREVO_SENDER_EMAIL`, and `BREVO_SENDER_NAME` are set in your Lambda environment variables. The sender domain (`mis-projects.online`) must be verified in your Brevo account under **Senders & IPs**.
 
+**1. Create a Brevo account**
+
+Go to [https://app.brevo.com](https://app.brevo.com) and sign up for a free account.
+
+**2. Get your API key**
+
+Go to **Profile → SMTP & API → API Keys → Generate a new API key**. Copy the key — this is your `BREVO_API_KEY`.
+
+**3. Verify your sender domain or email**
+
+Go to **Senders & IPs → Senders → Add a new sender**. Add the email address you want to send from (e.g. `helpdesk@yourdomain.com`). Brevo will send a verification email — click the link to confirm.
+
+> If you don't have a custom domain, you can use a Gmail or any personal email as the sender but deliverability may be lower.
+
 Three email types are sent via Brevo:
 - **Ticket confirmation** — sent to the student when they submit a support ticket
 - **Ticket reply** — sent to the student when an admin replies via the dashboard
@@ -290,13 +305,16 @@ Follow these steps in order. Complete AWS Setup (S3, DynamoDB, IAM) before deplo
 
 ### Step 1 — Package the Lambda function
 
-From the `backend/` directory, install dependencies and zip everything except secrets and cache:
+From the `backend/` directory, initialize the project, install dependencies, then zip for Lambda deployment:
 
 ```
 cd backend
-npm install
+npm init -y
+npm install @getbrevo/brevo
 zip -r function.zip . --exclude "*.env" "logs/*" "node_modules/.cache/*"
 ```
+
+> `node_modules/` is intentionally excluded from Git. Running `npm init -y` and `npm install` recreates it locally.
 
 This produces `backend/function.zip`. Keep this file — you will upload it in the next step.
 
