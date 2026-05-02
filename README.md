@@ -251,11 +251,7 @@ Create a table with these settings:
 - Partition key: `ticketId` (String)
 - Billing mode: On-demand
 
-A special `__COUNTER__` row is used for atomic ticket ID generation in `TX-A001` to `TX-Z999` format. Seed the counter before first use:
-
-```
-node test-seed-tickets.mjs
-```
+A special `__COUNTER__` row is used for atomic ticket ID generation in `TX-A001` to `TX-Z999` format. 
 
 ### Email — Brevo
 
